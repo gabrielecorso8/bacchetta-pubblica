@@ -4518,6 +4518,447 @@ document.title='La bacchetta · MVP 7';document.querySelector('.topbar small').t
 
 </script>
 <script>
+// Wand XXXIX: chiude un buco reale scoperto rispondendo alla domanda "come
+// si avvia il bridge dall'app".
+//
+// Il bridge vero genera un token di sessione NUOVO a ogni avvio (da sempre,
+// per sicurezza - vedi README_WAND35.md). wand_ui.html però ha già un
+// meccanismo pensato apposta per un codice che cambia: un campo "Codice di
+// collegamento" (variabile `pairing`, riempito all'avvio con `token` ma
+// modificabile in ogni momento) che il pulsante "Collega" rilegge dal vivo
+// ad ogni click (`pairing.value`, non una costante congelata al
+// caricamento) - il pensiero originale era: se il link cambia, incolli il
+// nuovo codice lì e ricolleghi, senza dover ricaricare pagina.
+//
+// Il problema pratico: aprendo la pagina dall'icona sulla schermata Home
+// (Wand XXXVII, nessun token nell'URL) e poi premendo "Avvia il bridge"
+// dalle Impostazioni (Wand XXXVI), il bridge parte per davvero sul PC con
+// un token nuovo, ma nessuno lo scriveva mai in quel campo - restava
+// vuoto o con un codice vecchio, quindi "Avvia" sembrava funzionare
+// ("Bridge acceso") ma "Collega" falliva ("controlla indirizzo,
+// certificato e token") finché non si andava a recuperare il link giusto
+// a mano dal pannello di wand_launcher.py sul PC - l'opposto di "molto più
+// comodo" per cui è stato costruito quel pulsante.
+//
+// Non tocca wand36_ui.js né wand_ui.html: aggiunge un proprio listener
+// separato sullo stesso pulsante Avvia (chiamare /start due volte è
+// innocuo, idempotente fin da Wand XXXV), legge dalla risposta l'URL
+// fresco con dentro il token nuovo e - se diverso da quello con cui questa
+// pagina è stata aperta - lo scrive da solo nel campo "Codice di
+// collegamento" (la variabile `pairing`, condivisa fra i vari <script> di
+// questa pagina come ogni altra variabile globale del progetto) e preme
+// Collega al posto tuo. Nessun ricaricamento di pagina: si aggiorna solo
+// l'indirizzo mostrato nella barra (senza navigare) per coerenza, con
+// history.replaceState.
+(() => {
+ 'use strict';
+ const $=id=>document.getElementById(id);
+ if(document.body.dataset.edition39==='1')return;
+ document.body.dataset.edition39='1';
+
+ const HOST_KEY='hogwartsBridgeHost';
+ const TOKEN_KEY='hogwartsLauncherToken';
+ const DEFAULT_LAUNCHER_PORT='8090';
+
+ function currentPcHost(){
+  let saved='';
+  try{saved=(localStorage.getItem(HOST_KEY)||'').trim();}catch(e){}
+  if(saved)return saved.includes(':')?saved:saved+':'+DEFAULT_LAUNCHER_PORT;
+  return location.hostname+':'+DEFAULT_LAUNCHER_PORT;
+ }
+ function launcherToken(){
+  try{return (localStorage.getItem(TOKEN_KEY)||'').trim();}catch(e){return '';}
+ }
+
+ const startBtn=$('bridgeLauncherStart36');
+ // `pairing` e `$('connect')` sono definiti nello script principale di
+ // wand_ui.html, prima di questo file in ordine di caricamento: se la
+ // struttura della pagina cambiasse e non esistessero più, meglio non fare
+ // nulla piuttosto che rompere qualcosa.
+ if(!startBtn || typeof pairing==='undefined' || !$('connect'))return;
+
+ startBtn.addEventListener('click',async()=>{
+  const token=launcherToken();
+  if(!token)return; // wand36 mostra già l'errore "manca il codice" per questo caso
+  try{
+   const resp=await fetch('https://'+currentPcHost()+'/start?token='+encodeURIComponent(token),{method:'POST'});
+   if(resp.status!==200)return;
+   const d=await resp.json();
+   if(!d.url)return;
+   const freshToken=new URL(d.url).hash.slice(1);
+   if(!freshToken || freshToken===pairing.value.trim())return; // già quello giusto: niente da fare
+   pairing.value=freshToken;
+   try{history.replaceState(null,'',location.pathname+location.search+'#'+freshToken);}catch(e){}
+   $('connect').click();
+  }catch(e){ /* wand36 mostra già l'errore principale della sua stessa chiamata */ }
+ });
+
+ const infoPanel=$('infoPanel16');
+ if(infoPanel){
+  const ul=infoPanel.querySelector('ul');
+  if(ul&&!ul.querySelector('li[data-v="39"]')){
+   const li=document.createElement('li');li.dataset.v='39';
+   li.innerHTML='<b>XXXIX</b> — "Avvia il bridge" dalle Impostazioni ora ricollega da solo la bacchetta con il codice di sessione nuovo che il PC genera a ogni avvio: prima, aprendo la pagina dall\'icona sulla Home (senza un link con codice già dentro), "Avvia" sembrava funzionare ma poi "Collega" falliva finché non si recuperava il codice giusto a mano dal pannello sul PC.';
+   ul.append(li);
+  }
+ }
+})();
+
+</script>
+<script>
+// Wand XL: ridisegno del combattimento richiesto dopo l'uso reale con Wand
+// XXV-XXXIX installate. Cinque richieste, tutte sulla stessa schermata
+// (Wand XXV in poi) - nessuna tocca wand_ui.html/mvp8/wand10-39_ui.js:
+// nasconde ciò che non serve più (mai eliminare - la convenzione di
+// sempre), sposta/riusa quello che serve, e aggiunge solo le parti
+// davvero nuove (Protego a gesto, aggancio/sgancio/cambio bersaglio con
+// l'accelerometro).
+//
+// 1) VISUALE: torna a essere comandata dal giroscopio della bacchetta,
+//    come nelle versioni precedenti Wand XXXI - non più dallo stick R3
+//    (che Wand XXXI aveva introdotto proprio per sostituirla). Wand XXXI
+//    aveva reso PERMANENTE il blocco della visuale a bacchetta (vedi lì,
+//    sezione "Nota tecnica"): qui quel blocco va rimosso, non aggirato -
+//    la conseguenza più delicata è che il SERVER tiene traccia, per ogni
+//    collegamento, dell'ultima modalità dichiarata con un vero messaggio
+//    'wand_mode' (mai più 'look' per davvero dopo la primissima
+//    connessione, da quando Wand XXXI ha smesso di inviarlo) - senza
+//    restaurare anche quell'invio, ogni 'wand_motion'/'look' verrebbe
+//    rifiutato dal server ("Modalità bacchetta non sincronizzata", vedi
+//    wand_server.py).
+// 2) STICK R3: rimosso del tutto (nascosto, mai eliminato) - il suo
+//    doppio compito (aggancio bersaglio col tocco secco, visuale col
+//    trascinamento) passa rispettivamente all'accelerometro (punto 3) e
+//    al giroscopio (punto 1).
+// 3) BERSAGLIO: aggancio/sgancio con uno scatto della bacchetta in
+//    avanti/indietro, cambio bersaglio con un piccolo scatto laterale -
+//    tutti e tre letti dall'accelerometro vero (devicemotion, introdotto
+//    come solo spike di misura da Wand XXXIV, qui finalmente collegato al
+//    gioco), proiettando il campione (ruotato dal riferimento del
+//    telefono a quello del mondo con gli stessi assi già calcolati da
+//    axes() in wand_ui.html) sugli stessi identici assi calibrati già
+//    usati per disegnare i glifi (base.tip/base.right) - nessuna
+//    calibrazione separata, come deciso esplicitamente prima di scrivere
+//    questo file.
+// 4) PROTEGO: non più un pulsante - si attiva portando la bacchetta in
+//    una posa di difesa calibrata (telefono verso il viso) e si
+//    disattiva allontanandola di nuovo, con un'isteresi fra i due angoli
+//    per non sfarfallare vicino al confine.
+// 5) I quattro pulsanti della griglia diventano: Magia base (il vecchio
+//    "01 Attacco base" di mvp8_ui.js, mai davvero rimosso - solo
+//    nascosto da Wand XXV insieme al resto del binario destro originale,
+//    qui recuperato e rimesso al posto lasciato libero da Protego),
+//    Magia avanzata (il vecchio "Incantesimi"/"Magia" - solo
+//    rietichettato), Magia antica (invariata: corrisponde già esattamente
+//    a quanto richiesto - click = R1 oggetti, tenuto premuto e mosso =
+//    L1+R1 magia antica, vedi actions.py), Schivata (invariata).
+//
+// STRATEGIA invariata rispetto a ogni file precedente: spostare/
+// riassegnare nodi ed event handler già collaudati, mai riscriverli da
+// zero; dove serve davvero disattivare un comportamento automatico che
+// non espone alcun interruttore (qui: lo sblocco permanente di Wand
+// XXX/XXXI su combatLocked26, il "lancio a mani libere sempre attivo"
+// che l'utente aveva esplicitamente chiesto di sostituire con un
+// pulsante da tenere premuto) si usa la stessa tecnica già collaudata da
+// Wand XXVI/XXVIII per stati privati di un altro file: agire SOLO
+// tramite l'interfaccia pubblica che quel file già espone (qui:
+// lockBtn.click()/.onclick), mai toccando la sua chiusura.
+(() => {
+ 'use strict';
+ const $=id=>document.getElementById(id);
+ if(document.body.dataset.edition40==='1')return;
+ document.body.dataset.edition40='1';
+ if(document.body.dataset.edition31!=='1')return; // costruito sulla struttura di Wand XXV-XXXI: senza di esse, niente da fare qui.
+
+ const grid=$('bigGrid25');
+ const elModeBasic=$('modeBasic');
+ const elModeShield=$('modeShield');
+ const elModeAncient=$('modeAncient');
+ const elSquare=$('bigSquare25');
+ const lockBtn=$('lockBtn26');
+ const stick=$('stick31');
+ const sensorsBtn=$('sensors');
+ if(!grid||!elModeBasic||!elModeShield||!elModeAncient||!elSquare||!lockBtn||!stick||!sensorsBtn){
+  // Una versione precedente mancante/alterata: meglio non applicare queste
+  // modifiche a metà piuttosto che rompere l'esistente.
+  return;
+ }
+
+ const style=document.createElement('style');
+ style.textContent=`
+ /* --- 2) Stick R3: nascosto, non eliminato --- */
+ #stick31{display:none!important}
+ /* --- 4) Protego non è più un pulsante della griglia --- */
+ #bigGrid25 #modeShield{display:none!important}
+ /* --- 5) Magia base riprende il posto lasciato libero da Protego (order:1,
+    in alto a sinistra, da quando Wand XXVI li ha invertiti) - lo stile
+    generico dei pulsanti della griglia (#bigGrid25 button{...}, già in
+    wand25_ui.js) si applica da solo non appena questo nodo diventa figlio
+    di #bigGrid25. --- */
+ #bigGrid25 #modeBasic{order:1}
+ /* --- Indicatore Protego: un piccolo distintivo, visibile solo mentre la
+    posa di difesa è agganciata - Protego non ha più un pulsante da
+    evidenziare con .active come prima. --- */
+ #protegoBadge40{position:fixed;left:50%;top:max(10px,env(safe-area-inset-top));transform:translate(-50%,0) scale(.85);opacity:0;transition:opacity .15s,transform .15s;z-index:40;background:#1e4055;border:1px solid #8fcfff;border-radius:20px;padding:7px 16px;font:13px/1 Georgia,serif;letter-spacing:2px;color:#cfe9ff;pointer-events:none}
+ #protegoBadge40[data-on40="1"]{opacity:1;transform:translate(-50%,0) scale(1)}
+ /* --- Calibrazione posa di difesa + soglia scatti bersaglio, dentro
+    Impostazioni · Bacchetta (stessa sezione dove Wand XXXVIII ha messo il
+    pannello dell'accelerometro). --- */
+ .guardBox40{margin-top:14px;padding-top:12px;border-top:1px solid #34424a}
+ .guardBox40 h3{margin:0 0 6px;font-size:15px;color:#9fd7ff}
+ .guardBox40 p{margin:4px 0}
+ .guardBox40 .row40{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:6px}
+ .guardBox40 output{font-variant-numeric:tabular-nums}
+ `;
+ document.head.append(style);
+
+ // ============================================================
+ // 5) Griglia: Protego esce, Magia base rientra al suo posto.
+ // ============================================================
+ grid.append(elModeBasic); // sposta il nodo (conserva i gestori motionButton di mvp8_ui.js, invariati)
+ elModeBasic.innerHTML='<span class="bigMark" aria-hidden="true">✦</span><b>MAGIA BASE</b><span class="bigSub">tieni e muovi per lanciare</span>';
+ elModeBasic.setAttribute('aria-label','Magia base: tieni premuto e muovi la bacchetta per lanciare');
+ elSquare.innerHTML='<span class="bigMark" aria-hidden="true">□</span><b>MAGIA AVANZATA</b><span class="bigSub">tieni e scorri, o glifo/voce</span>';
+ // Magia antica non cambia: già corrisponde esattamente a quanto chiesto
+ // (click = R1 lancio oggetti, tenuto premuto e mosso = L1+R1 magia
+ // antica - vedi actions.py: 'ancient_magic_tap' su r1, 'ancient_magic' su
+ // l1+r1, entrambi già cablati da Wand XXVI). Schivata invariata.
+
+ // ============================================================
+ // Sblocco permanente e definitivo di combatLocked26. Wand XXX/XXXI lo
+ // tenevano forzatamente bloccato per spegnere la visuale a bacchetta e
+ // armare il lancio automatico dell'incantesimo base a ogni movimento
+ // deciso (nessun pulsante coinvolto) - qui la visuale torna al
+ // giroscopio (punto 1 più sotto) e il lancio "a mani libere" torna a
+ // richiedere Magia base tenuta premuta, come chiesto esplicitamente. Un
+ // solo click (col gestore ORIGINALE di wand26, ancora intatto in questo
+ // istante) sblocca; rimuovendo poi quel gestore, nessun futuro
+ // lockBtn.click() di Wand XXVIII/XXX/XXXI (restano tutti agganciati a
+ // pointerdown/focus/visibilitychange/il pulsante VISUALE nascosto - mai
+ // rimossi, la convenzione è nascondere, mai disfare un file già
+ // rilasciato) può più ribloccarlo: .click() continuerà a generare
+ // l'evento, ma senza più alcun gestore che lo traduca in un blocco/
+ // sblocco reale. Il pulsante è già display:none dai tempi di Wand XXIX -
+ // qui lo si ribadisce solo per rendere questo file autosufficiente.
+ // ============================================================
+ if(lockBtn.dataset.locked26==='1')lockBtn.click();
+ lockBtn.onclick=null;
+ lockBtn.style.setProperty('display','none','important');
+
+ // ============================================================
+ // 4) Protego a gesto: calibrazione di una posa di difesa + isteresi.
+ // ============================================================
+ let guardVector40=null;
+ try{const saved=JSON.parse(localStorage.getItem('wandGuardVector40')||'null');if(Array.isArray(saved)&&saved.length===3&&saved.every(Number.isFinite))guardVector40=saved;}catch(e){}
+ let protegoEngaged40=false;
+ const badge=document.createElement('div');badge.id='protegoBadge40';badge.textContent='🛡 PROTEGO';
+ document.body.append(badge);
+
+ function engageProtego40(){
+  if(protegoEngaged40||!ready)return;
+  cancelActive(); // annulla qualunque altro stato attivo, come fa ogni pulsante di combattimento all'inizio della propria pressione - PRIMA di segnare Protego agganciato, altrimenti il wrap di cancelActive() qui sotto sgancerebbe subito quello che questa stessa funzione ha appena acceso.
+  protegoEngaged40=true;badge.dataset.on40='1';
+  shieldHolding7=true;performAction('protego');
+ }
+ function disengageProtego40(){
+  if(!protegoEngaged40)return;
+  protegoEngaged40=false;badge.dataset.on40='0';
+  cancelActive();
+ }
+ // Se un altro pulsante annulla lo stato attivo (ogni pulsante di
+ // combattimento chiama cancelActive() come primo gesto della propria
+ // pressione), Protego deve risultare sganciato anche per questo file -
+ // stessa tecnica già usata da wand26_ui.js per combatLocked26.
+ const cancelActivePrev40=cancelActive;
+ cancelActive=function(){
+  if(protegoEngaged40){protegoEngaged40=false;badge.dataset.on40='0';}
+  cancelActivePrev40();
+ };
+
+ const GUARD_ENGAGE_DEG=26,GUARD_RELEASE_DEG=38; // isteresi: non tarata in gioco, vedi README_WAND40.md
+ const GUARD_ENGAGE_DOT=Math.cos(GUARD_ENGAGE_DEG*Math.PI/180),GUARD_RELEASE_DOT=Math.cos(GUARD_RELEASE_DEG*Math.PI/180);
+ setInterval(()=>{
+  if(!ready||!guardVector40||!latest||performance.now()-sampleAt>500){if(protegoEngaged40)disengageProtego40();return;}
+  const d=dot(latest.forward,guardVector40);
+  if(!protegoEngaged40&&d>=GUARD_ENGAGE_DOT&&wandMode!=='basic'&&wandMode!=='spell')engageProtego40();
+  else if(protegoEngaged40&&d<GUARD_RELEASE_DOT)disengageProtego40();
+ },60);
+
+ // --- Sezione "Bacchetta" delle Impostazioni: stesso aiuto già usato da
+ // Wand XXXVIII per trovarla, riusato qui per la calibrazione della posa
+ // di difesa e per la soglia dello scatto bersaglio (punto 3 più sotto). --
+ function byHeading40(text){
+  return [...document.querySelectorAll('#settings section')].find(s=>{
+   const h=s.querySelector(':scope > h2');
+   return h&&h.textContent.trim().indexOf(text)===0;
+  });
+ }
+ const secBacchetta=byHeading40('Bacchetta');
+ if(secBacchetta){
+  const box=document.createElement('div');box.className='guardBox40';
+  box.innerHTML='<h3>🛡️ Calibra la posa di difesa (Protego)</h3>'
+   +'<p>Porta la bacchetta davanti al viso, ferma, come vorresti tenerla per proteggerti, poi premi il pulsante e resta ferma un istante. Finché non la calibri, Protego non si attiva mai da solo.</p>'
+   +'<div class="row40"><button id="guardCalib40" type="button">Calibra posa di difesa</button> <span id="guardStatus40">'+(guardVector40?'Posa già registrata su questo telefono.':'Non ancora calibrata.')+'</span></div>';
+  secBacchetta.append(box);
+  const guardBtn=$('guardCalib40'),guardStatus=$('guardStatus40');
+  let guardStage40='idle',guardSamples40=[];
+  guardBtn.onclick=()=>{
+   if(!sensors||performance.now()-sampleAt>1000){guardStatus.textContent='Prima abilita i sensori (pulsante "Abilita sensori" più sopra).';return;}
+   guardStage40='sampling';guardSamples40=[];guardBtn.disabled=true;
+   guardStatus.textContent='Tieni ferma la posa di difesa…';
+  };
+  window.addEventListener('deviceorientation',()=>{
+   if(guardStage40!=='sampling'||!latest)return;
+   guardSamples40.push(latest.forward);
+   if(guardSamples40.length>=25){
+    const avg=unit(guardSamples40.reduce((s,v)=>s.map((x,i)=>x+v[i]),[0,0,0]));
+    const stable=guardSamples40.every(v=>dot(v,avg)>Math.cos(8*Math.PI/180));
+    guardBtn.disabled=false;
+    if(!stable){guardStage40='idle';guardSamples40=[];guardStatus.textContent='Presa instabile: tieni fermo e riprova.';return;}
+    guardStage40='idle';guardVector40=avg;
+    try{localStorage.setItem('wandGuardVector40',JSON.stringify(avg));}catch(e){}
+    guardStatus.textContent='Posa di difesa registrata.';
+   }
+  });
+ }
+
+ // ============================================================
+ // 1) Visuale: il giroscopio torna a comandarla sempre - tranne mentre un
+ // pulsante di combattimento è tenuto premuto (Magia base/avanzata: quel
+ // movimento serve a LANCIARE, non a guardarsi intorno) o mentre Protego è
+ // agganciato (si resta fermi a proteggersi, non si guarda in giro).
+ // ============================================================
+ function cameraIdle40(){return wandMode!=='basic'&&wandMode!=='spell'&&!protegoEngaged40;}
+ let lastCamPoint40=null;
+ window.addEventListener('deviceorientation',()=>{
+  if(!ready||!base||!filtered||!latest||!cameraIdle40()){lastCamPoint40=null;return;}
+  const point=filtered.slice();
+  if(lastCamPoint40){
+   const dx=point[0]-lastCamPoint40[0],dy=point[1]-lastCamPoint40[1];
+   if(Math.hypot(dx,dy)>.08)send({type:'wand_motion',mode:'look',x:dx,y:dy});
+  }
+  lastCamPoint40=point;
+ });
+
+ // Il server ricorda, per ogni collegamento, l'ultima modalità dichiarata
+ // con un vero messaggio 'wand_mode' (vedi commento in testa al file): da
+ // Wand XXXI in poi, tornare a 'look' non veniva più dichiarato per
+ // davvero (solo una sentinella lato telefono) perché la visuale era
+ // spenta per scelta. Ora che il giroscopio la comanda di nuovo sempre,
+ // quella dichiarazione va restaurata - senza toccare nessuna delle
+ // sentinelle client-side già scritte da Wand XXVI/XXXI (setWandModePrev40
+ // le esegue per prime, invariate): si aggiunge solo l'invio al server, in
+ // più, mai al posto di.
+ const setWandModePrev40=setWandMode;
+ setWandMode=function(mode){
+  setWandModePrev40(mode);
+  if(mode==='look')transportSend({type:'wand_mode',mode:'look'});
+ };
+
+ // ============================================================
+ // 3) Bersaglio dall'accelerometro: aggancio/sgancio (scatto avanti/
+ // indietro) e cambio bersaglio (scatto laterale), proiettando il
+ // campione sugli stessi assi calibrati già usati per i glifi.
+ // ============================================================
+ const GRAVITY_EMA_ALPHA_40=0.03; // stessa tecnica/valore di wand34_ui.js
+ const RELEASE_RATIO_40=0.6;
+ const AXIS_DOMINANCE_40=1.3; // lo scatto deve essere chiaramente avanti/indietro OPPURE laterale, non ambiguo
+ let gEst40=null,armed40=true,accelReady40=false;
+ let accelThresh40=9;
+ try{const saved=parseFloat(localStorage.getItem('wandTargetThresh40'));if(Number.isFinite(saved)&&saved>0)accelThresh40=saved;}catch(e){}
+
+ // latest.right e latest.forward sono già, rispettivamente, gli assi
+ // locali X (destra del telefono) e Y (punta/bordo superiore) espressi nel
+ // riferimento del mondo (le colonne 1 e 2 della matrice di rotazione
+ // usata da axes() in wand_ui.html). Il terzo asse locale (Z, fuori dallo
+ // schermo verso chi guarda - lo stesso su cui DeviceMotion riporta
+ // l'accelerazione) è la loro colonna mancante: per una matrice di
+ // rotazione propria, colonna1 × colonna2 = colonna3, quindi
+ // cross(right,forward) la ricostruisce senza bisogno di calcolarla da
+ // capo altrove nel progetto.
+ function worldFromDevice40(ax,ay,az){
+  const outOfScreen=cross(latest.right,latest.forward);
+  return [0,1,2].map(i=>ax*latest.right[i]+ay*latest.forward[i]+az*outOfScreen[i]);
+ }
+ function targetGestureIdle40(){return !protegoEngaged40&&wandMode!=='basic'&&wandMode!=='spell'&&!recording;}
+ function pulseStick40(x,y){
+  transportSend({type:'wand_stick',x,y});
+  setTimeout(()=>transportSend({type:'wand_stick',x:0,y:0}),90);
+ }
+ function handleScatto40(ax,ay,az){
+  if(!ready||!base||!latest||performance.now()-sampleAt>500||!targetGestureIdle40())return;
+  const world=worldFromDevice40(ax,ay,az);
+  const fwd=dot(world,base.tip),lat=dot(world,base.right);
+  if(Math.abs(fwd)>=Math.abs(lat)*AXIS_DOMINANCE_40){
+   performAction('target'); // stesso identico R3/tap di sempre: aggancia se sganciato, sgancia se agganciato
+   $('result').textContent=fwd>0?'Bersaglio: scatto in avanti (aggancio/sgancio)':'Bersaglio: scatto indietro (aggancio/sgancio)';
+  }else if(Math.abs(lat)>=Math.abs(fwd)*AXIS_DOMINANCE_40){
+   pulseStick40(lat>0?1:-1,0);
+   $('result').textContent='Cambio bersaglio · '+(lat>0?'destra':'sinistra');
+  }
+  // scatto diagonale, né chiaramente avanti/indietro né chiaramente
+  // laterale: ignorato di proposito, meglio nessuna azione che quella
+  // sbagliata.
+ }
+ // Stessa stima grezza della gravità già usata (e commentata per esteso)
+ // da wand34_ui.js: non duplicata concettualmente, solo con nome proprio
+ // di questo file per restare indipendente dalla chiusura di quel pannello.
+ function onAccelMotion40(e){
+  const raw=e.acceleration&&e.acceleration.x!==null?e.acceleration:null;
+  let ax,ay,az;
+  if(raw){ax=raw.x||0;ay=raw.y||0;az=raw.z||0;}
+  else{
+   const g=e.accelerationIncludingGravity;
+   if(!g||g.x===null)return;
+   if(!gEst40)gEst40={x:g.x,y:g.y,z:g.z};
+   gEst40.x+=(g.x-gEst40.x)*GRAVITY_EMA_ALPHA_40;gEst40.y+=(g.y-gEst40.y)*GRAVITY_EMA_ALPHA_40;gEst40.z+=(g.z-gEst40.z)*GRAVITY_EMA_ALPHA_40;
+   ax=g.x-gEst40.x;ay=g.y-gEst40.y;az=g.z-gEst40.z;
+  }
+  const mag=Math.hypot(ax,ay,az);
+  if(armed40&&mag>=accelThresh40){armed40=false;handleScatto40(ax,ay,az);}
+  else if(!armed40&&mag<accelThresh40*RELEASE_RATIO_40)armed40=true;
+ }
+ // Permesso accelerometro: in più sullo stesso pulsante "Abilita sensori"
+ // già esistente (addEventListener, mai una sostituzione del gestore
+ // primario che chiede il permesso dell'orientamento) - un solo tocco
+ // dell'utente chiede entrambi i permessi separati richiesti da iOS.
+ sensorsBtn.addEventListener('click',async()=>{
+  if(accelReady40)return;
+  try{
+   if(typeof DeviceMotionEvent==='undefined')return; // niente accelerometro su questo browser: il resto della bacchetta funziona comunque
+   if(DeviceMotionEvent.requestPermission&&await DeviceMotionEvent.requestPermission()!=='granted')return;
+   window.addEventListener('devicemotion',onAccelMotion40);
+   accelReady40=true;
+  }catch(e){/* permesso negato o non disponibile: nessun errore bloccante */}
+ });
+
+ if(secBacchetta){
+  const threshBox=document.createElement('div');threshBox.className='guardBox40';
+  threshBox.innerHTML='<h3>🎯 Sensibilità aggancio/cambio bersaglio</h3>'
+   +'<p>Quanto deve essere deciso lo scatto della bacchetta perché conti come aggancio/sgancio o cambio bersaglio. Più basso = più sensibile (ma più falsi scatti). Non tarabile da qui: serve provarla con la bacchetta vera in mano.</p>'
+   +'<div class="row40">soglia <input id="targetThresh40" type="range" min="4" max="20" step="0.5" value="'+accelThresh40+'"> <output id="targetThreshV40">'+accelThresh40.toFixed(1)+'</output> m/s²</div>';
+  secBacchetta.append(threshBox);
+  $('targetThresh40').oninput=e=>{
+   accelThresh40=parseFloat(e.target.value);
+   $('targetThreshV40').textContent=accelThresh40.toFixed(1);
+   try{localStorage.setItem('wandTargetThresh40',String(accelThresh40));}catch(err){}
+  };
+ }
+
+ // --- Pannello ℹ ---
+ const infoPanel=$('infoPanel16');
+ if(infoPanel){
+  const ul=infoPanel.querySelector('ul');
+  if(ul&&!ul.querySelector('li[data-v="40"]')){
+   const li=document.createElement('li');li.dataset.v='40';
+   li.innerHTML='<b>XL</b> — ridisegno del combattimento: la visuale torna al giroscopio della bacchetta (come prima di Wand XXXI), lo stick R3 sparisce; aggancio/sgancio bersaglio con uno scatto avanti/indietro e cambio bersaglio con uno scatto laterale, letti dall\'accelerometro vero e proiettati sulla stessa calibrazione già usata per i glifi (nuova sezione "Sensibilità aggancio/cambio bersaglio" in Impostazioni · Bacchetta per tararne la soglia); Protego non è più un pulsante - si attiva portando la bacchetta in una posa di difesa calibrata (nuovo pulsante "Calibra posa di difesa" nella stessa sezione) e si disattiva allontanandola; i quattro pulsanti della griglia diventano Magia base (tenuta premuta, come l\'antico "01 Attacco base"), Magia avanzata (rinominata da "Magia"), Magia antica e Schivata (invariate). Nessuno di questi gesti è verificabile da qui: servono un telefono vero, la presa reale e Hogwarts Legacy davanti per tarare soglie e angoli.';
+   ul.append(li);
+  }
+ }
+})();
+
+</script>
+<script>
 
 (() => {
  'use strict';
