@@ -5981,6 +5981,202 @@ document.title='La bacchetta · MVP 7';document.querySelector('.topbar small').t
 
 </script>
 <script>
+// Wand L: "aumenta le animazioni magiche presenti nello schermo" - un
+// potenziamento puramente decorativo delle animazioni già introdotte da
+// Wand XLII (scintilla, bagliore Protego, braci), più due effetti nuovi.
+// Nessun file precedente viene toccato: tutto qui è ADDITIVO - ascoltatori
+// in più (mai un rimpiazzo di onpointerdown/performAction/motionButton),
+// nodi DOM in più, un osservatore in più su un elemento già esistente.
+// Tutto si spegne da sé se il telefono chiede animazioni ridotte (la
+// regola globale `@media(prefers-reduced-motion:reduce){*{...}}` di
+// wand_ui.html copre anche le animazioni aggiunte qui, non ne serve una
+// nuova - stessa nota già lasciata da Wand XLII).
+//
+// Cinque potenziamenti, tutti pensati per restare leggeri (pura CSS dove
+// possibile, pochi nodi DOM temporanei altrove) e non competere mai con la
+// lettura reale dei sensori durante un combattimento:
+//
+// 1) BAGLIORE RESPIRANTE sui 4 pulsanti principali: oggi il bagliore dorato
+//    attorno a ciascuno (Wand XLII) è statico, si accende solo su :active.
+//    Qui pulsa in permanenza, lentamente, sfasato pulsante per pulsante
+//    (non tutti insieme - più organico). Va su un `::before` dedicato, MAI
+//    sul box-shadow del pulsante stesso: quel box-shadow è già dichiarato
+//    `!important` da Wand XLII, e per la cascata CSS un'animazione ha
+//    priorità PIÙ BASSA di una dichiarazione `!important` dello stesso
+//    autore sulla stessa proprietà - animarlo direttamente sarebbe stato
+//    invisibile, sovrascritto in ogni istante dal valore statico. Un
+//    elemento nuovo (`::before`) non ha questo conflitto: nessuna regola
+//    precedente lo tocca.
+// 2) LUCE CHE ATTRAVERSA (shimmer): una sottile banda diagonale che
+//    scorre lentissima sopra ciascuna delle quattro illustrazioni (Wand
+//    XLV/XLVI, oggi foto statiche) - un `::after` con `mix-blend-mode:
+//    screen` e opacità bassa, per schiarire senza mai coprire il testo
+//    (che ha già il proprio alone nero di Wand XLV per restare leggibile
+//    sopra qualunque cosa). `border-radius:inherit` su entrambi gli
+//    pseudo-elementi evita angoli squadrati che spunterebbero fuori dagli
+//    angoli arrotondati veri dei pulsanti.
+// 3) SCOPPIO PIÙ RICCO alla pressione: oltre alle 7 scintille già esistenti
+//    (Wand XLII) e alla scia sul trascinamento (Wand XLIII, entrambe
+//    intatte), un ascoltatore in più aggiunge altre 10 scintille (raggio
+//    maggiore, più magico) più un anello che si espande e svanisce dal
+//    punto di pressione - un secondo tipo di effetto, non solo "più
+//    puntini uguali".
+// 4) PULVISCOLO PIÙ FITTO: da 7 braci (Wand XLII) a 21 - stessa identica
+//    classe/animazione già esistente, solo più istanze coi soliti
+//    parametri casuali. Restano comunque discrete (`opacity` bassa,
+//    `pointer-events:none`), non un effetto invadente.
+// 5) SCOPPIO COLORATO AL LANCIO RIUSCITO: il lampo a schermo intero
+//    (`#flash`.fire) già scatta ad ogni incantesimo lanciato (base,
+//    Protego, magia antica, glifo/voce), con un colore diverso per tipo
+//    (variabile CSS `--spell`, impostata sempre appena prima del lampo).
+//    Un `MutationObserver` sulla classe di `#flash` - mai un rimpiazzo dei
+//    cinque punti diversi del codice che oggi attivano il lampo - osserva
+//    quel momento da fuori e fa esplodere scintille colorate dello stesso
+//    colore dal centro schermo: lo stesso effetto delle scintille sui
+//    pulsanti, ma legato al LANCIO riuscito invece che al solo tocco, e
+//    colorato in base all'incantesimo. Riusa il keyframe hl42Spark già
+//    esistente (trasla ed evapora), non ne serve uno nuovo.
+(() => {
+ 'use strict';
+ const $=id=>document.getElementById(id);
+ if(document.body.dataset.edition50==='1')return;
+ document.body.dataset.edition50='1';
+ if(document.body.dataset.edition49!=='1')return;
+
+ const grid=$('bigGrid25');
+ const elSquare=$('bigSquare25');
+ const elModeAncient=$('modeAncient');
+ const elDodge=$('dodgeBtn18');
+ if(!grid||!elSquare||!elModeAncient||!elDodge)return;
+
+ const style=document.createElement('style');
+ style.textContent=`
+ /* --- 1) Bagliore respirante, su un ::before dedicato (vedi nota sopra sul
+    perché non sul box-shadow del pulsante stesso). --- */
+ #bigGrid25 button{position:relative}
+ #bigGrid25 button::before{content:'';position:absolute;inset:-3px;border-radius:inherit;pointer-events:none;z-index:1;animation:hl50BtnGlow 3.2s ease-in-out infinite}
+ @keyframes hl50BtnGlow{0%,100%{box-shadow:0 0 10px 1px rgba(201,162,74,.22)}50%{box-shadow:0 0 24px 6px rgba(240,207,122,.58)}}
+ #bigGrid25 #bigSquare25::before{animation-delay:.8s}
+ #bigGrid25 #modeAncient::before{animation-delay:1.6s}
+ #bigGrid25 #dodgeBtn18::before{animation-delay:2.4s}
+
+ /* --- 2) Banda di luce che attraversa lentamente ciascuna illustrazione,
+    sfasata pulsante per pulsante. --- */
+ #bigGrid25 button::after{content:'';position:absolute;inset:0;border-radius:inherit;pointer-events:none;z-index:2;mix-blend-mode:screen;background:linear-gradient(115deg,transparent 42%,rgba(255,255,255,.18) 50%,transparent 58%);background-size:260% 260%;background-position:220% 220%;animation:hl50Shimmer 7s ease-in-out infinite}
+ @keyframes hl50Shimmer{0%,55%{background-position:220% 220%}82%,100%{background-position:-60% -60%}}
+ #bigGrid25 #bigSquare25::after{animation-delay:1.6s}
+ #bigGrid25 #modeAncient::after{animation-delay:3.2s}
+ #bigGrid25 #dodgeBtn18::after{animation-delay:4.8s}
+
+ /* --- 3) Anello che si espande e svanisce dal punto di pressione, in
+    aggiunta alle scintille (§3 sotto usa la classe .hl42-spark già
+    esistente di Wand XLII: stesso keyframe, solo più istanze). --- */
+ .hl50-ring{position:fixed;width:14px;height:14px;margin:-7px 0 0 -7px;border-radius:50%;border:2px solid var(--hl42-gold-bright,#f0cf7a);pointer-events:none;z-index:69;animation:hl50Ring .5s ease-out forwards}
+ @keyframes hl50Ring{0%{transform:scale(.4);opacity:.7}100%{transform:scale(3.6);opacity:0}}
+
+ /* --- 5) Scintille colorate al lancio riuscito: stesso keyframe hl42Spark
+    di Wand XLII, colore impostato dinamicamente in linea per ogni punto
+    (var CSS non adatta qui: il colore cambia ad ogni lancio, non è un
+    tema fisso). --- */
+ .hl50-castspark{position:fixed;width:5px;height:5px;border-radius:50%;pointer-events:none;z-index:71;animation:hl42Spark .65s ease-out forwards}
+ `;
+ document.head.append(style);
+
+ // --- 3) Scoppio più ricco alla pressione: ascoltatore IN PIÙ (capture,
+ // passive), le scintille e la scia già esistenti (Wand XLII/XLIII) non
+ // vengono toccate. ---
+ function spawnRing50(btn){
+  const rect=btn.getBoundingClientRect();
+  const ring=document.createElement('span');
+  ring.className='hl50-ring';
+  ring.style.left=(rect.left+rect.width/2)+'px';
+  ring.style.top=(rect.top+rect.height/2)+'px';
+  document.body.append(ring);
+  ring.addEventListener('animationend',()=>ring.remove());
+ }
+ function spawnExtraSparks50(btn){
+  const rect=btn.getBoundingClientRect();
+  const cx=rect.left+rect.width/2,cy=rect.top+rect.height/2;
+  const n=10;
+  for(let i=0;i<n;i++){
+   const s=document.createElement('span');
+   s.className='hl42-spark';
+   const angle=(Math.PI*2*i)/n+Math.random()*0.6;
+   const dist=30+Math.random()*40;
+   s.style.left=cx+'px';s.style.top=cy+'px';
+   s.style.setProperty('--hl42dx',(Math.cos(angle)*dist).toFixed(1)+'px');
+   s.style.setProperty('--hl42dy',(Math.sin(angle)*dist).toFixed(1)+'px');
+   document.body.append(s);
+   s.addEventListener('animationend',()=>s.remove());
+  }
+ }
+ for(const btn of grid.querySelectorAll('button')){
+  btn.addEventListener('pointerdown',()=>{spawnRing50(btn);spawnExtraSparks50(btn);},{capture:true,passive:true});
+ }
+
+ // --- 4) Pulviscolo più fitto: stessa identica classe/animazione di Wand
+ // XLII (.hl42-ember/hl42Rise), solo più istanze in più, coi soliti
+ // parametri casuali - le 7 originali restano, invariate. ---
+ const EXTRA_EMBER_COUNT_50=14;
+ for(let i=0;i<EXTRA_EMBER_COUNT_50;i++){
+  const ember=document.createElement('span');
+  ember.className='hl42-ember';
+  ember.style.left=(4+Math.random()*92)+'vw';
+  ember.style.animationDuration=(9+Math.random()*7)+'s';
+  ember.style.animationDelay=(Math.random()*10)+'s';
+  document.body.append(ember);
+ }
+
+ // --- 5) Scoppio colorato al lancio riuscito: osserva dall'esterno la
+ // classe di #flash (mai un rimpiazzo dei cinque punti del codice che oggi
+ // la attivano - basta e avanza reagire al cambiamento). ---
+ function spawnCastBurst50(color){
+  const cx=window.innerWidth/2,cy=window.innerHeight*0.42;
+  const n=16;
+  for(let i=0;i<n;i++){
+   const s=document.createElement('span');
+   s.className='hl50-castspark';
+   const angle=(Math.PI*2*i)/n+Math.random()*0.4;
+   const dist=70+Math.random()*90;
+   s.style.left=cx+'px';s.style.top=cy+'px';
+   s.style.background=color;
+   s.style.boxShadow='0 0 8px 2px '+color;
+   s.style.setProperty('--hl42dx',(Math.cos(angle)*dist).toFixed(1)+'px');
+   s.style.setProperty('--hl42dy',(Math.sin(angle)*dist).toFixed(1)+'px');
+   document.body.append(s);
+   s.addEventListener('animationend',()=>s.remove());
+  }
+ }
+ const flashEl=$('flash');
+ if(flashEl){
+  let wasFiring50=flashEl.classList.contains('fire');
+  new MutationObserver(()=>{
+   const isFiring=flashEl.classList.contains('fire');
+   if(isFiring&&!wasFiring50){
+    const color=(document.documentElement.style.getPropertyValue('--spell')||'').trim()||'#f0cf7a';
+    spawnCastBurst50(color);
+   }
+   wasFiring50=isFiring;
+  }).observe(flashEl,{attributes:true,attributeFilter:['class']});
+ }
+
+ const infoPanel=$('infoPanel16');
+ if(infoPanel){
+  const h2=infoPanel.querySelector('h2');
+  if(h2&&/^La bacchetta · XLIX$/.test(h2.textContent.trim()))h2.textContent='La bacchetta · L';
+  const ul=infoPanel.querySelector('ul');
+  if(ul&&!ul.querySelector('li[data-v="50"]')){
+   const li=document.createElement('li');li.dataset.v='50';
+   li.innerHTML='<b>L</b> — più magia a schermo: i quattro pulsanti principali guadagnano un bagliore che respira e un riflesso di luce che li attraversa lentamente; premerli fa comparire anche un anello che si espande, oltre alle scintille già presenti; le braci di sottofondo triplicano; ogni incantesimo lanciato con successo fa esplodere scintille colorate dal centro schermo, dello stesso colore del lampo che già lo accompagnava.';
+   ul.append(li);
+  }
+ }
+ document.title='La bacchetta · L';
+ const smallLabel=document.querySelector('.topbar small');if(smallLabel)smallLabel.textContent='ARS MAGICA · L';
+})();
+
+</script>
+<script>
 
 (() => {
  'use strict';
