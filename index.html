@@ -5928,6 +5928,59 @@ document.title='La bacchetta · MVP 7';document.querySelector('.topbar small').t
 
 </script>
 <script>
+// Wand XLIX: il titolo dell'app nella schermata principale deve essere
+// SOLO "Bacchetta", non "Bacchetta · Ars Magica · XLVIII".
+//
+// "il titolo dell'app (in alto) deve essere solo 'Bacchetta', rimuovi
+//  'ars magica ...'"
+//
+// Wand XLVII aveva aggiunto la scritta "BACCHETTA" (.hl47Word) accanto al
+// posto lasciato libero dall'icona rimossa, ma non aveva toccato la
+// piccola etichetta "ARS MAGICA · XLVIII" (.topbar small) già presente lì
+// accanto da prima - le due scritte comparivano insieme sulla stessa riga.
+// Qui si nasconde SOLO quella piccola etichetta (mai cancellata dal DOM,
+// stessa convenzione di sempre in questo progetto): "BACCHETTA" resta
+// l'unico testo visibile in quello spazio. Il grande titolo `<h1>La
+// bacchetta</h1>` più sotto non viene toccato - non è quello di cui parla
+// la richiesta (che dice "in alto", cioè la riga del masthead, non il
+// titolo sotto) ed era comunque già segnalato come poco visibile per un
+// problema preesistente all'altezza fissa della barra (vedi
+// README_WAND47.md), non introdotto né risolto da questa versione.
+(() => {
+ 'use strict';
+ if(document.body.dataset.edition49==='1')return;
+ document.body.dataset.edition49='1';
+ if(document.body.dataset.edition48!=='1')return;
+
+ const smallLabel=document.querySelector('.topbar small');
+ if(!smallLabel)return;
+
+ const style=document.createElement('style');
+ style.textContent=`
+ /* --- "ARS MAGICA · XLIX" sparisce (nascosta, non cancellata): resta solo
+    "BACCHETTA" (.hl47Word, Wand XLVII) come titolo del masthead. --- */
+ .topbar small{display:none!important}
+ `;
+ document.head.append(style);
+
+ const $=id=>document.getElementById(id);
+ const infoPanel=$('infoPanel16');
+ if(infoPanel){
+  const h2=infoPanel.querySelector('h2');
+  if(h2&&/^La bacchetta · XLVIII$/.test(h2.textContent.trim()))h2.textContent='La bacchetta · XLIX';
+  const ul=infoPanel.querySelector('ul');
+  if(ul&&!ul.querySelector('li[data-v="49"]')){
+   const li=document.createElement('li');li.dataset.v='49';
+   li.innerHTML='<b>XLIX</b> — l\'etichetta piccola "ARS MAGICA · ..." accanto al titolo sparisce: nel masthead resta solo la scritta "BACCHETTA" (Wand XLVII).';
+   ul.append(li);
+  }
+ }
+ document.title='La bacchetta · XLIX';
+ smallLabel.textContent='ARS MAGICA · XLIX'; // aggiornato per coerenza anche se ora nascosto
+})();
+
+</script>
+<script>
 
 (() => {
  'use strict';
