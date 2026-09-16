@@ -6177,6 +6177,63 @@ document.title='La bacchetta · MVP 7';document.querySelector('.topbar small').t
 
 </script>
 <script>
+// Wand LI: "aggiorna le animazioni, l'ultimo effetto che hai aggiunto non
+// mi piace" - l'ultimo dei cinque potenziamenti di Wand L era lo scoppio
+// di scintille colorate dal centro schermo ad ogni incantesimo lanciato
+// con successo. Sparisce; i primi quattro (bagliore respirante, riflesso
+// di luce sui pulsanti, anello + scintille extra alla pressione, pulviscolo
+// triplicato) restano esattamente come sono.
+//
+// Nota tecnica su COME sparisce: non con `display:none`, che qui sarebbe
+// sbagliato invece che solo "diverso dal solito" - Wand L crea ogni
+// scintilla (`.hl50-castspark`) con una sua animazione CSS
+// (`hl42Spark`) e la rimuove dal DOM solo quando quell'animazione
+// finisce (`animationend`). Un elemento con `display:none` non esegue MAI
+// nessuna animazione CSS e non genera mai l'evento `animationend`: quelle
+// scintille resterebbero per sempre nel DOM, invisibili ma mai ripulite -
+// una perdita di nodi silenziosa che peggiora ad ogni incantesimo lanciato.
+// `opacity:0` invece lascia l'animazione (e quindi la sua fine, e quindi la
+// pulizia già scritta da Wand L) intatta: la scintilla anima e sparisce dal
+// DOM esattamente come prima, semplicemente senza mai diventare visibile.
+// Vince sul colore impostato in linea da Wand L (`style.background`,
+// `style.boxShadow`) perché quelli toccano proprietà diverse: `opacity`
+// non è mai stata impostata in linea, quindi qui una regola `!important`
+// su questa proprietà si applica senza lo scontro "lo stile in linea vince
+// sempre" già documentato altrove in questo progetto.
+(() => {
+ 'use strict';
+ if(document.body.dataset.edition51==='1')return;
+ document.body.dataset.edition51='1';
+ if(document.body.dataset.edition50!=='1')return;
+
+ const style=document.createElement('style');
+ style.textContent=`
+ /* --- Solo lo scoppio colorato al lancio sparisce (nascosto in modo che
+    l'animazione e la sua pulizia continuino a girare, vedi nota sopra) -
+    bagliore, riflesso di luce, anello/scintille alla pressione e
+    pulviscolo di Wand L restano tutti invariati. --- */
+ .hl50-castspark{opacity:0!important}
+ `;
+ document.head.append(style);
+
+ const $=id=>document.getElementById(id);
+ const infoPanel=$('infoPanel16');
+ if(infoPanel){
+  const h2=infoPanel.querySelector('h2');
+  if(h2&&/^La bacchetta · L$/.test(h2.textContent.trim()))h2.textContent='La bacchetta · LI';
+  const ul=infoPanel.querySelector('ul');
+  if(ul&&!ul.querySelector('li[data-v="51"]')){
+   const li=document.createElement('li');li.dataset.v='51';
+   li.innerHTML='<b>LI</b> — rimosso lo scoppio di scintille colorate al centro schermo ad ogni incantesimo lanciato (Wand L): non piaceva. Bagliore respirante, riflesso di luce sui 4 pulsanti, anello + scintille extra alla pressione e pulviscolo triplicato restano tutti invariati.';
+   ul.append(li);
+  }
+ }
+ document.title='La bacchetta · LI';
+ const smallLabel=document.querySelector('.topbar small');if(smallLabel)smallLabel.textContent='ARS MAGICA · LI';
+})();
+
+</script>
+<script>
 
 (() => {
  'use strict';
