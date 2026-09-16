@@ -5750,6 +5750,74 @@ document.title='La bacchetta · MVP 7';document.querySelector('.topbar small').t
 
 </script>
 <script>
+// Wand XLVII: due correzioni dirette sul masthead della schermata
+// principale introdotto da Wand XLIII.
+//
+// "rimuovi l'icona dell'app dalla schermata dell'app (in alto a sinistra),
+// non mi piace.
+// nello stesso font di "ars magica - bacchetta xx.." scrivi "bacchetta""
+//
+// 1) L'icona (#hl43Icon, Wand XLIII) sparisce SOLO dalla schermata
+//    principale - nascosta, non rimossa dal DOM, stessa convenzione di
+//    sempre. L'icona gemella nell'intestazione di Impostazioni
+//    (#hl43SettingsIcon) non è quella descritta ("in alto a sinistra
+//    della schermata dell'app": Impostazioni non ha mai avuto testo "ars
+//    magica"/"bacchetta" nella sua intestazione, solo "Impostazioni") e
+//    resta quindi invariata - nessuna richiesta di toglierla anche lì.
+// 2) Al posto dell'icona, la parola "BACCHETTA" compare nello stesso
+//    slot (a sinistra del blocco titolo), con lo stesso font/dimensione/
+//    spaziatura/colore della piccola etichetta "ARS MAGICA · XLVI" già
+//    lì accanto (`.topbar small`) - stesso trattamento tipografico, un
+//    elemento NUOVO e separato, non una riscrittura del testo esistente
+//    (quella riga resta quello che ogni versione successiva la imposta,
+//    invariata).
+(() => {
+ 'use strict';
+ const $=id=>document.getElementById(id);
+ if(document.body.dataset.edition47==='1')return;
+ document.body.dataset.edition47='1';
+ if(document.body.dataset.edition46!=='1')return; // sopra la correzione di Wand XLVI
+
+ const icon=$('hl43Icon');
+ const topbarRow=document.querySelector('.topbar > div.hl43Row');
+ if(!icon||!topbarRow)return;
+
+ const style=document.createElement('style');
+ style.textContent=`
+ /* --- 1) Solo l'icona della schermata principale sparisce. --- */
+ #hl43Icon{display:none!important}
+ /* --- 2) Stessa identica dichiarazione di font di ".topbar small"
+    (Wand X/wand10_ui.js), su un elemento diverso: se in futuro
+    ".topbar small" cambiasse font, questa etichetta lo seguirebbe senza
+    bisogno di toccarla, condividendo la stessa fonte di verità. --- */
+ .hl47Word{font:10px Georgia,serif!important;letter-spacing:3px;color:#b4a276;flex:0 0 auto;white-space:nowrap}
+ `;
+ document.head.append(style);
+
+ if(!topbarRow.querySelector('.hl47Word')){
+  const word=document.createElement('span');
+  word.className='hl47Word';
+  word.textContent='BACCHETTA';
+  topbarRow.prepend(word);
+ }
+
+ const infoPanel=$('infoPanel16');
+ if(infoPanel){
+  const h2=infoPanel.querySelector('h2');
+  if(h2&&/^La bacchetta · XLVI$/.test(h2.textContent.trim()))h2.textContent='La bacchetta · XLVII';
+  const ul=infoPanel.querySelector('ul');
+  if(ul&&!ul.querySelector('li[data-v="47"]')){
+   const li=document.createElement('li');li.dataset.v='47';
+   li.innerHTML='<b>XLVII</b> — l\'icona accanto al titolo nella schermata principale (Wand XLIII) sparisce; al suo posto compare la scritta "BACCHETTA" nello stesso font della piccola etichetta "ARS MAGICA" già lì accanto. L\'icona nell\'intestazione di Impostazioni non cambia.';
+   ul.append(li);
+  }
+ }
+ document.title='La bacchetta · XLVII';
+ const smallLabel=document.querySelector('.topbar small');if(smallLabel)smallLabel.textContent='ARS MAGICA · XLVII';
+})();
+
+</script>
+<script>
 
 (() => {
  'use strict';
