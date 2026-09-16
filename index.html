@@ -5818,6 +5818,116 @@ document.title='La bacchetta · MVP 7';document.querySelector('.topbar small').t
 
 </script>
 <script>
+// Wand XLVIII: due correzioni al gameplay dei quattro pulsanti principali,
+// dopo che Gabriele ha rivisto l'assegnazione di default dei comandi.
+//
+// "magia avanzata ha ancora il quadrato nel pulsante, rimuovilo.
+//  poi assegniamo di default i pulsanti:
+//  * triangolo/protego = telefono verso il viso (tenere premuto triangolo
+//    quando è richiesto dal gioco: mantenendo il telefono fermo al viso
+//    considera triangolo tenuto premuto).
+//  * quadrato = il pulsante magia base quando cliccato solo esegue
+//    quadrato, se tenuto premuto e il telefono mosso invece scaglia gli
+//    incantesimi base
+//  * cerchio = L1
+//  * X = pulsante X - cambio set (se fatto swipe cambia set di
+//    incantesimi)
+//  Il pulsante magia avanzata lo ristabilirei con glifi predefiniti (verso
+//  su esegue l'incantesimo R2+triangolo, ecc.) così come in una delle
+//  vecchie versioni della bacchetta, così da facilitare il gameplay"
+//
+// Di questi quattro punti, TRE sono già esattamente il comportamento in
+// vigore oggi e non richiedono alcuna modifica di codice, solo conferma:
+//  - Triangolo/Protego: la "posa di difesa" di Wand XL già fa esattamente
+//    questo - tenere il telefono fermo verso il viso arma Protego (tasto
+//    Triangolo) automaticamente, nessun tocco richiesto.
+//  - X/Cambio Set: già così da Wand XLI - tocco secco = pulsante ✕, swipe
+//    orizzontale = cambio set.
+//  - Magia Avanzata a glifi predefiniti: già così da Wand XXVI
+//    (wireSquare26, modalità "Immersione semplificata", predefinita) -
+//    scorrimento del dito o movimento deciso della bacchetta verso l'alto
+//    lancia R2+Triangolo, verso destra R2+Cerchio, verso il basso
+//    R2+Croce, verso sinistra R2+Quadrato, sempre sul set attualmente
+//    attivo.
+// Restano due modifiche vere, più la correzione richiesta all'inizio:
+//
+// 1) BUG: Magia Avanzata (#bigSquare25) mostra ancora il glifo □ che aveva
+//    da Wand XL, anche se Wand XLVI aveva già dato lo STESSO carattere a
+//    Magia Base per un motivo ormai diverso ("questo pulsante preme anche
+//    Quadrato" - vedi punto 2). Le due icone identiche sullo stesso
+//    schermo confondevano i due pulsanti: qui si nasconde SOLO quella di
+//    Magia Avanzata (mai cancellata dal DOM, stessa convenzione di sempre
+//    in questo progetto), quella di Magia Base resta invariata.
+// 2) Magia Base guadagna un tocco secco: stesso identico schema già usato
+//    da Wand XXVI per "Magia antica rapida" - un involucro attorno alla
+//    funzione globale performAction osserva dall'esterno se durante QUESTA
+//    pressione è già partito un lancio vero (attacco_base) prima del
+//    rilascio; nessun gestore già assegnato su #modeBasic viene toccato o
+//    sovrascritto, solo ascoltatori IN PIÙ (addEventListener). Se nessun
+//    lancio è partito, il rilascio preme Quadrato nudo (azione 'confirm' -
+//    Interagisci nel gioco - la stessa già cablata di default sul vecchio
+//    #interact7, sempre abilitata in actions.py).
+// 3) Cerchio = L1: Gabriele ha rimappato Schivata/Volo giù su L1 nelle
+//    impostazioni di controllo di Hogwarts Legacy stesso - modifica lato
+//    server, non in questo file (vedi actions.py: 'back' e
+//    'flight_descend' ora usano lo slot 'l1' invece di 'circle'). Nessun
+//    pulsante del telefono cambia comportamento per questo punto: sia il
+//    controller nativo (L1 fisico) sia gli eventuali pulsanti telefono che
+//    richiamano 'back'/'flight_descend' per nome continuano a funzionare
+//    come prima, solo il tasto premuto sul joypad virtuale è diverso. Se
+//    avevi già riassegnato tu stesso Schivata/Volo giù in Impostazioni ·
+//    Bacchetta, quella tua scelta resta quella salvata e non viene toccata
+//    da questo default.
+(() => {
+ 'use strict';
+ const $=id=>document.getElementById(id);
+ if(document.body.dataset.edition48==='1')return;
+ document.body.dataset.edition48='1';
+ if(document.body.dataset.edition47!=='1')return;
+
+ const elModeBasic=$('modeBasic');
+ const elSquare=$('bigSquare25');
+ if(!elModeBasic||!elSquare)return;
+
+ const style=document.createElement('style');
+ style.textContent=`
+ /* --- 1) Solo il glifo di Magia Avanzata sparisce (nascosto, non
+    cancellato) - quello di Magia Base, stessa classe .bigMark, resta
+    intatto grazie allo scoping sull'ID del pulsante. --- */
+ #bigGrid25 #bigSquare25 .bigMark{display:none!important}
+ `;
+ document.head.append(style);
+
+ // --- 2) Tocco secco su Magia Base = Quadrato nudo (Interagisci). Stesso
+ // schema di osservazione esterna di Wand XXVI per Magia antica rapida:
+ // solo ascoltatori IN PIÙ, nessun gestore esistente toccato. ---
+ let basicCastFired48=false;
+ const performActionBase48=performAction;
+ performAction=function(name){
+  if(name==='attacco_base')basicCastFired48=true;
+  return performActionBase48(name);
+ };
+ elModeBasic.addEventListener('pointerdown',()=>{basicCastFired48=false;});
+ function endBasicTap48(){if(!basicCastFired48)performAction('confirm');}
+ elModeBasic.addEventListener('pointerup',endBasicTap48);
+
+ const infoPanel=$('infoPanel16');
+ if(infoPanel){
+  const h2=infoPanel.querySelector('h2');
+  if(h2&&/^La bacchetta · XLVII$/.test(h2.textContent.trim()))h2.textContent='La bacchetta · XLVIII';
+  const ul=infoPanel.querySelector('ul');
+  if(ul&&!ul.querySelector('li[data-v="48"]')){
+   const li=document.createElement('li');li.dataset.v='48';
+   li.innerHTML='<b>XLVIII</b> — rimosso il glifo □ rimasto per errore su Magia Avanzata. Un tocco secco su Magia Base preme ora Quadrato nudo (Interagisci); tenuto premuto e mosso lancia sempre l\'incantesimo base come prima. Schivata e Volo giù passano dal tasto Cerchio a L1 (rimappati anche nel gioco) - se li avevi già riassegnati tu in Impostazioni, la tua scelta resta quella valida. Protego a posa (telefono verso il viso), Cambio Set a swipe e i glifi predefiniti di Magia Avanzata (su=R2+Triangolo, ecc.) erano già così, confermati invariati.';
+   ul.append(li);
+  }
+ }
+ document.title='La bacchetta · XLVIII';
+ const smallLabel=document.querySelector('.topbar small');if(smallLabel)smallLabel.textContent='ARS MAGICA · XLVIII';
+})();
+
+</script>
+<script>
 
 (() => {
  'use strict';
