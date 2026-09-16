@@ -6251,6 +6251,545 @@ document.title='La bacchetta · MVP 7';document.querySelector('.topbar small').t
 
 </script>
 <script>
+// Wand LII: il correttivo del lag continuo è stato scritto direttamente
+// dentro wand50_ui.js (unica eccezione del progetto - vedi il commento in
+// fondo a quel file), non in un file numerato a parte: non c'era nulla di
+// nuovo da aggiungere all'interfaccia, solo qualcosa da correggere in un
+// file già esistente. Questo file esiste solo per la cerimonia di sempre -
+// titolo, etichetta piccola ed elenco "ℹ Novità" - che altrimenti sarebbe
+// rimasta ferma a "LI" nonostante il correttivo fosse già in produzione.
+(() => {
+ 'use strict';
+ const $=id=>document.getElementById(id);
+ if(document.body.dataset.edition52==='1')return;
+ document.body.dataset.edition52='1';
+ if(document.body.dataset.edition51!=='1')return;
+
+ const infoPanel=$('infoPanel16');
+ if(infoPanel){
+  // Impostato senza condizioni (non più "solo se il testo precedente
+  // combacia esattamente"): quella catena di controlli si è già spezzata
+  // una volta prima d'ora (wand23_ui.js si aspettava "XXII", mai esistito
+  // per un salto di numerazione, e da lì il titolo qui dentro è rimasto
+  // fermo su "XXI" per intere decine di versioni, nonostante il titolo
+  // della pagina e l'etichetta piccola fossero sempre stati giusti). Qui
+  // sappiamo già con certezza qual è la versione corrente - va scritta e
+  // basta, non inseguita.
+  const h2=infoPanel.querySelector('h2');
+  if(h2)h2.textContent='La bacchetta · LII';
+  const ul=infoPanel.querySelector('ul');
+  if(ul&&!ul.querySelector('li[data-v="52"]')){
+   const li=document.createElement('li');li.dataset.v='52';
+   li.innerHTML='<b>LII</b> — corretto un lag continuo: lo scoppio di scintille al lancio (Wand L) era solo nascosto da Wand LI, non fermato, e continuava a costare lavoro reale ad ogni incantesimo; ora è tolto del tutto. Anche il bagliore respirante dei 4 pulsanti principali, che ridisegnava un\'ombra costosa in un ciclo continuo dal caricamento della pagina, ora anima solo la trasparenza - stesso effetto, molto più leggero.';
+   ul.append(li);
+  }
+ }
+ document.title='La bacchetta · LII';
+ const smallLabel=document.querySelector('.topbar small');if(smallLabel)smallLabel.textContent='ARS MAGICA · LII';
+})();
+
+</script>
+<script>
+// Wand LIII: la parte visibile di questa versione è minima di proposito -
+// il grosso del lavoro ("avvio sempre dal PC, token stabile per accoppiare
+// il telefono una volta sola") è tutto lato server (wand_server.py,
+// wand_launcher.py): il telefono non deve fare nulla di diverso, deve solo
+// continuare a funzionare col link salvato. Questo file esiste solo per la
+// cerimonia di sempre - titolo, etichetta piccola ed elenco "ℹ Novità" -
+// stessa logica di wand52_ui.js per Wand LII.
+(() => {
+ 'use strict';
+ const $=id=>document.getElementById(id);
+ if(document.body.dataset.edition53==='1')return;
+ document.body.dataset.edition53='1';
+ if(document.body.dataset.edition52!=='1')return;
+
+ const infoPanel=$('infoPanel16');
+ if(infoPanel){
+  // Wand LII: scritto senza condizioni, non più agganciato al testo
+  // esatto della versione precedente - vedi il commento in wand52_ui.js.
+  const h2=infoPanel.querySelector('h2');
+  if(h2)h2.textContent='La bacchetta · LIII';
+  const ul=infoPanel.querySelector('ul');
+  if(ul&&!ul.querySelector('li[data-v="53"]')){
+   const li=document.createElement('li');li.dataset.v='53';
+   li.innerHTML='<b>LIII</b> — il PC ora si avvia da solo (non serve più toccare "Avvia" dal telefono) e il link di accoppiamento non cambia più ad ogni riavvio: si accoppia una volta e da allora si apre sempre dal telefono, come un\'app normale.';
+   ul.append(li);
+  }
+ }
+ document.title='La bacchetta · LIII';
+ const smallLabel=document.querySelector('.topbar small');if(smallLabel)smallLabel.textContent='ARS MAGICA · LIII';
+})();
+
+</script>
+<script>
+// Wand LIV (parte impostazioni): "nuova pipeline" richiesta - "semplifica
+// e sintetizza tutto, deve essere facile da avviare, facile da configurare
+// e facile da utilizzare nel gioco".
+//
+// Questo file si occupa della struttura delle schede: nasconde le tre che
+// non servono più sul telefono (Incantesimi, Bacchetta, Avanzate - la
+// richiesta esplicita è "bloccale"/"sono inutili qui, servono solo lato
+// dashboard PC") e ripulisce la scheda "🏠 Avvio" (Wand XLIV) dai due pezzi
+// che quelle schede rendevano orfani o superati:
+// - "✨ Assegna incantesimi" puntava a una scheda che non esiste più qui;
+// - "1 · Avvia il bridge sul PC" (Wand XXXVI, il pulsante Avvia/Ferma col
+//   codice del pannello) non ha più senso ora che Wand LIII fa avviare il
+//   bridge da solo appena il PC si accende - un pulsante "avvia" per
+//   qualcosa che parte già da sola confonde più che aiutare. Diventa una
+//   semplice nota: se la bacchetta perde il collegamento, il rimedio è sul
+//   PC (riavvia wand_launcher.py), non più un modulo da compilare qui.
+// Le tre nuove card di Gioca (microfono/giroscopio/accelerometro + OK) e
+// l'allenamento gesti arrivano nei file successivi (wand55/wand56) - qui
+// si fa solo spazio, nascondendo mai cancellando, stessa convenzione di
+// sempre.
+//
+// Perché nascondere le SCHEDE stesse (bottone + sezioni) invece di solo
+// svuotarle: il contenuto di Incantesimi/Bacchetta/Avanzate resta intatto
+// e funzionante nel DOM (nulla si rompe per i file che lo usano ancora,
+// come wand40_ui.js che legge/scrive lì dentro), semplicemente non è più
+// raggiungibile dal telefono - esattamente "bloccata", non "cancellata".
+(() => {
+ 'use strict';
+ const $=id=>document.getElementById(id);
+ if(document.body.dataset.edition54==='1')return;
+ document.body.dataset.edition54='1';
+ if(document.body.dataset.edition53!=='1')return; // costruito sulla scheda "Avvio" di Wand XLIV e sulle schede di Wand XVII: senza di esse, niente da fare qui.
+
+ const tabBar=$('tabs17');
+ if(!tabBar)return;
+
+ const style=document.createElement('style');
+ style.textContent=`
+ /* --- Le tre schede bloccate: bottone sparito dalla barra... --- */
+ #tabs17 button[data-tab-target17="spells"],
+ #tabs17 button[data-tab-target17="wand"],
+ #tabs17 button[data-tab-target17="advanced"]{display:none!important}
+ /* --- ...e le loro sezioni, per sicurezza, anche se per errore restassero
+    smarcate come scheda attiva (es. un vecchio "wandSettingsTab17" salvato
+    nel localStorage da prima di questa versione). --- */
+ .tabpanel17[data-tab17="spells"],
+ .tabpanel17[data-tab17="wand"],
+ .tabpanel17[data-tab17="advanced"]{display:none!important}
+ /* --- Scorciatoia "✨ Assegna incantesimi" (Wand XLIV, card 3 di Avvio):
+    punta a una scheda che non esiste più sul telefono. --- */
+ #hl44CardSpells{display:none!important}
+ /* --- Il modulo "Avvia/Ferma il bridge" (Wand XXXVI): resta nel DOM
+    intatto (non è cancellato, solo nascosto) ma sostituito qui sotto da
+    una nota statica - il PC ora si avvia da solo (Wand LIII). --- */
+ #bridgeLauncher36{display:none!important}
+ #hl54StartNote{margin:0}
+ `;
+ document.head.append(style);
+
+ // Se la scheda ricordata da una sessione precedente è una di quelle
+ // appena bloccate, si torna a "Gioca" (mai lasciare tutte le sezioni
+ // nascoste insieme per un tabId che non ha più un bottone raggiungibile).
+ const current=tabBar.querySelector('button[aria-current="true"]');
+ if(current && ['spells','wand','advanced'].includes(current.dataset.tabTarget17)){
+  tabBar.querySelector('button[data-tab-target17="play"]')?.click();
+ }
+
+ // Card 1 di Avvio: il pulsante "Avvia il bridge" diventa una nota - il PC
+ // fa già tutto da solo, non c'è più nulla da premere qui.
+ const cardServer=$('hl44CardServer');
+ if(cardServer && !$('hl54StartNote')){
+  const h3=cardServer.querySelector('h3');
+  if(h3)h3.textContent='1 · Il PC si avvia da solo';
+  const note=document.createElement('p');
+  note.id='hl54StartNote';
+  note.className='hint';
+  note.textContent='Non serve più premere nulla qui: appena accendi il PC e apri wand_launcher.py, il bridge parte da sé. Se la bacchetta risulta scollegata, controlla il PC - dal telefono basta riaprire questa pagina.';
+  cardServer.append(note);
+ }
+
+ const infoPanel=$('infoPanel16');
+ if(infoPanel){
+  // Wand LII: scritto senza condizioni, non più agganciato al testo
+  // esatto della versione precedente - vedi il commento in wand52_ui.js.
+  const h2=infoPanel.querySelector('h2');
+  if(h2)h2.textContent='La bacchetta · LIV';
+  const ul=infoPanel.querySelector('ul');
+  if(ul&&!ul.querySelector('li[data-v="54"]')){
+   const li=document.createElement('li');li.dataset.v='54';
+   li.innerHTML='<b>LIV</b> — impostazioni semplificate: le schede Incantesimi, Bacchetta e Avanzate spariscono dal telefono (bloccate, non cancellate - torneranno utili lato dashboard PC); il pulsante "Avvia il bridge" in Avvio diventa una nota, perché ora parte da solo.';
+   ul.append(li);
+  }
+ }
+ document.title='La bacchetta · LIV';
+ const smallLabel=document.querySelector('.topbar small');if(smallLabel)smallLabel.textContent='ARS MAGICA · LIV';
+})();
+
+</script>
+<script>
+// Wand LV: "facile da utilizzare nel gioco" - prima di scendere in campo,
+// tre prove rapide e concrete (non un generico "permesso concesso"): il
+// microfono sente qualcosa? il giroscopio si accorge se ruoto il telefono?
+// l'accelerometro si accorge se lo agito? Ognuna delle tre mostra un
+// riscontro immediato ("✓ funziona", non solo "autorizzato") e quando tutte
+// e tre sono passate compare un'unica riga "🪄 Bacchetta pronta".
+//
+// Il vecchio pulsante "Abilita sensori" (Wand X, spostato in Avvio da Wand
+// XLIV) chiedeva solo il permesso e basta - nessun modo di sapere se il
+// sensore rispondeva DAVVERO finché non si iniziava a giocare e qualcosa
+// non funzionava. Le due nuove prove (giroscopio, accelerometro) chiedono
+// da sole lo stesso permesso quando serve, quindi quel pulsante/card in
+// Avvio non serve più: nascosto qui (mai cancellato), con una nota che
+// rimanda a questa scheda.
+//
+// Il microfono riusa l'oggetto `recognition` già creato altrove (Wand VIII/
+// X) con un ascoltatore AGGIUNTIVO (addEventListener, non sostituzione di
+// onresult) - non cambia in alcun modo il riconoscimento incantesimi già
+// funzionante, si limita a guardare se un risultato qualsiasi arriva.
+(() => {
+ 'use strict';
+ const $=id=>document.getElementById(id);
+ if(document.body.dataset.edition55==='1')return;
+ document.body.dataset.edition55='1';
+ if(document.body.dataset.edition54!=='1')return;
+
+ const tabBar=$('tabs17');
+ const priority=$('priority9');
+ if(!tabBar||!priority)return;
+
+ const style=document.createElement('style');
+ style.textContent=`
+ .hl55Status{float:right;font-size:12px;font-weight:normal;opacity:.85}
+ .hl55Status[data-ok="1"]{color:#8fd19e}
+ #hl55Ready{margin:10px 0 0;padding:10px;border-radius:10px;background:#20351f;border:1px solid #6a9e6f;color:#d9f2d9;font-weight:600;text-align:center}
+ .hl55Card p.hl55Readout{font-family:ui-monospace,monospace;font-size:12px}
+ /* Wand LV: la card "Sensori di movimento" di Avvio (Wand XLIV) è superata
+    dalle due prove qui sotto, che verificano davvero il sensore invece di
+    limitarsi a chiedere il permesso. */
+ #hl44CardSensors{display:none!important}
+ `;
+ document.head.append(style);
+
+ const section=document.createElement('section');
+ section.id='sensorTests55';
+ section.className='tabpanel17';
+ section.dataset.tab17='play';
+ section.innerHTML=
+  '<h2>🧪 Prova i sensori</h2>'+
+  '<p class="hint">Tre prove veloci prima di iniziare - ognuna dice subito se funziona.</p>'+
+  '<div class="hl44Card hl55Card" id="hl55CardMic"><h3>🎤 Microfono<span class="hl55Status" id="hl55MicStatus">da provare</span></h3>'+
+   '<button type="button" id="hl55MicBtn">Ascolta</button>'+
+   '<p class="hint">Premi e pronuncia una parola qualsiasi: se il telefono la sente, il test passa.</p></div>'+
+  '<div class="hl44Card hl55Card" id="hl55CardGyro"><h3>🧭 Giroscopio<span class="hl55Status" id="hl55GyroStatus">da provare</span></h3>'+
+   '<button type="button" id="hl55GyroBtn">Attiva e prova</button>'+
+   '<p class="hint hl55Readout" id="hl55GyroReadout">In attesa.</p>'+
+   '<p class="hint">Ruota il telefono in mano: se i numeri sopra cambiano, il test passa da solo.</p></div>'+
+  '<div class="hl44Card hl55Card" id="hl55CardAccel"><h3>📳 Accelerometro<span class="hl55Status" id="hl55AccelStatus">da provare</span></h3>'+
+   '<button type="button" id="hl55AccelBtn">Attiva e prova</button>'+
+   '<p class="hint hl55Readout" id="hl55AccelReadout">In attesa.</p>'+
+   '<p class="hint">Agita il telefono come per lanciare un incantesimo: il picco sale, il test passa da solo.</p></div>'+
+  '<p id="hl55Ready" hidden>🪄 Bacchetta pronta - tutti e tre i sensori funzionano.</p>';
+ priority.before(section);
+
+ // Wand XLIV aveva reso "play" la scheda mostrata per prima, ma activate()
+ // di Wand XVII conosce solo le SUE sezioni (TABS, chiuso nella sua
+ // closure) - questa nuova sezione, come già "home" in Wand XLIV, deve
+ // essere mostrata/nascosta da un ascoltatore proprio, aggiuntivo.
+ function syncVisibility(){
+  const current=tabBar.querySelector('button[aria-current="true"]')?.dataset.tabTarget17;
+  section.hidden=(current!=='play');
+ }
+ tabBar.addEventListener('click',syncVisibility);
+ syncVisibility();
+
+ const micOk={v:false},gyroOk={v:false},accelOk={v:false};
+ function markOk(status,flag){
+  status.textContent='✓ funziona';status.dataset.ok='1';flag.v=true;
+  if(micOk.v&&gyroOk.v&&accelOk.v)$('hl55Ready').hidden=false;
+ }
+
+ // --- Microfono: riusa l'oggetto SpeechRecognition già creato altrove,
+ // se il browser lo supporta - un ascoltatore in più, non una sostituzione.
+ const micBtn=$('hl55MicBtn'),micStatus=$('hl55MicStatus');
+ if(typeof recognition!=='undefined'&&recognition){
+  recognition.addEventListener('result',()=>{if(!micOk.v)markOk(micStatus,micOk);});
+  micBtn.onclick=()=>{
+   micStatus.textContent='in ascolto…';
+   try{recognition.start();}catch(e){/* già in ascolto: va bene comunque */}
+  };
+ } else {
+  micBtn.disabled=true;micStatus.textContent='non supportato';
+ }
+
+ // --- Permesso condiviso: su iOS 13+ orientamento e movimento vanno
+ // richiesti (e concessi) separatamente, di solito nello stesso gesto -
+ // le due prove qui sotto lo richiedono ciascuna per sé, senza duplicare
+ // il vecchio pulsante #sensors (che chiedeva solo l'orientamento).
+ async function requestMotionAccess(EventClass){
+  if(typeof EventClass==='undefined')throw new Error('Sensore non disponibile su questo browser');
+  if(typeof EventClass.requestPermission==='function'){
+   if(await EventClass.requestPermission()!=='granted')throw new Error('Permesso negato');
+  }
+ }
+
+ // --- Giroscopo: lettura live di alpha/beta/gamma, test superato al primo
+ // scarto ampio rispetto alla prima lettura (un vero movimento della mano,
+ // non il minimo rumore del sensore fermo sul tavolo). ---
+ const gyroBtn=$('hl55GyroBtn'),gyroStatus=$('hl55GyroStatus'),gyroReadout=$('hl55GyroReadout');
+ let gyroBaseline=null;
+ function onOrientation55(e){
+  const a=e.alpha,b=e.beta,g=e.gamma;
+  if(a==null&&b==null&&g==null)return;
+  gyroReadout.textContent='α '+Math.round(a||0)+'° · β '+Math.round(b||0)+'° · γ '+Math.round(g||0)+'°';
+  if(gyroBaseline===null){gyroBaseline={a,b,g};return;}
+  const moved=Math.abs((a??0)-(gyroBaseline.a??0))>8||Math.abs((b??0)-(gyroBaseline.b??0))>8||Math.abs((g??0)-(gyroBaseline.g??0))>8;
+  if(moved&&!gyroOk.v)markOk(gyroStatus,gyroOk);
+ }
+ gyroBtn.onclick=async()=>{
+  gyroBtn.disabled=true;gyroStatus.textContent='attivazione…';
+  try{
+   await requestMotionAccess(window.DeviceOrientationEvent);
+   window.addEventListener('deviceorientation',onOrientation55);
+   gyroStatus.textContent='ruota il telefono…';
+  }catch(e){gyroStatus.textContent=e.message;}
+  gyroBtn.disabled=false;
+ };
+
+ // --- Accelerometro: magnitudine del vettore accelerazione (con gravità,
+ // più diffusa e affidabile di quella "pura"), picco massimo mostrato in
+ // diretta, test superato quando il picco supera nettamente la quiete
+ // (~9.8 m/s² da fermo) di una soglia che un vero "colpo di bacchetta"
+ // supera facilmente ma un tavolo immobile no. ---
+ const accelBtn=$('hl55AccelBtn'),accelStatus=$('hl55AccelStatus'),accelReadout=$('hl55AccelReadout');
+ const ACCEL_SPIKE_THRESHOLD=16;
+ let accelPeak=0;
+ function onMotion55(e){
+  const acc=e.accelerationIncludingGravity||e.acceleration;
+  if(!acc||acc.x==null)return;
+  const mag=Math.hypot(acc.x||0,acc.y||0,acc.z||0);
+  if(mag>accelPeak)accelPeak=mag;
+  accelReadout.textContent='attuale '+mag.toFixed(1)+' m/s² · picco '+accelPeak.toFixed(1)+' m/s²';
+  if(accelPeak>ACCEL_SPIKE_THRESHOLD&&!accelOk.v)markOk(accelStatus,accelOk);
+ }
+ accelBtn.onclick=async()=>{
+  accelBtn.disabled=true;accelStatus.textContent='attivazione…';
+  try{
+   await requestMotionAccess(window.DeviceMotionEvent);
+   window.addEventListener('devicemotion',onMotion55);
+   accelStatus.textContent='agita il telefono…';
+  }catch(e){accelStatus.textContent=e.message;}
+  accelBtn.disabled=false;
+ };
+
+ const infoPanel=$('infoPanel16');
+ if(infoPanel){
+  const h2=infoPanel.querySelector('h2');
+  if(h2)h2.textContent='La bacchetta · LV';
+  const ul=infoPanel.querySelector('ul');
+  if(ul&&!ul.querySelector('li[data-v="55"]')){
+   const li=document.createElement('li');li.dataset.v='55';
+   li.innerHTML='<b>LV</b> — nuova scheda "🧪 Prova i sensori" in Gioca: tre prove vere (microfono, giroscopio, accelerometro), non solo un permesso concesso a occhi chiusi. Quando tutte e tre passano compare "🪄 Bacchetta pronta".';
+   ul.append(li);
+  }
+ }
+ document.title='La bacchetta · LV';
+ const smallLabel=document.querySelector('.topbar small');if(smallLabel)smallLabel.textContent='ARS MAGICA · LV';
+})();
+
+</script>
+<script>
+// Wand LVI: allenamento gesti con profilo personale, come richiesto
+// esplicitamente ("Sì, profilo/soglie personalizzate (consigliato)").
+//
+// Protego (Wand XL) e la sensibilità di aggancio/cambio bersaglio (Wand XL)
+// avevano già una calibrazione - ma viveva dentro Impostazioni · Bacchetta,
+// scheda che Wand LIV ha nascosto dal telefono (spostata concettualmente
+// sulla dashboard PC). Qui non si duplica quella scheda: si costruisce un
+// allenamento guidato NUOVO, raggiungibile da Gioca insieme alle prove
+// sensori di Wand LV, che scrive esattamente sulle STESSE due chiavi di
+// localStorage che wand40_ui.js legge già da solo all'avvio della pagina
+// ('wandGuardVector40','wandTargetThresh40') - stesso trucco già usato dal
+// progetto per personalizzare una variabile chiusa nella closure di un
+// altro file senza poterla toccare direttamente: si scrive dove quel file
+// legge, poi si ricarica la pagina perché la rilegga.
+//
+// A differenza della vecchia calibrazione (una sola presa tenuta ferma),
+// qui si ripete il gesto 3 volte e si fa la media - meno sensibile a una
+// presa storta per caso in un singolo tentativo.
+(() => {
+ 'use strict';
+ const $=id=>document.getElementById(id);
+ if(document.body.dataset.edition56==='1')return;
+ document.body.dataset.edition56='1';
+ if(document.body.dataset.edition55!=='1')return;
+
+ const gyroCard=$('sensorTests55');
+ if(!gyroCard)return; // costruito subito dopo la scheda "Prova i sensori" di Wand LV
+
+ const style=document.createElement('style');
+ style.textContent=`
+ .hl56Card button.danger{margin-top:10px}
+ #hl56Guide{margin:6px 0 0;font-weight:600}
+ `;
+ document.head.append(style);
+
+ const section=document.createElement('section');
+ section.id='gestureTraining56';
+ section.className='tabpanel17';
+ section.dataset.tab17='play';
+ section.innerHTML=
+  '<h2>🎯 Allena i tuoi gesti</h2>'+
+  '<p class="hint">Personalizza Protego e l\'aggancio bersaglio sulla tua presa - 3 ripetizioni bastano, poi ricarica da sola per applicarle. Richiede i sensori già provati qui sopra.</p>'+
+  '<div class="hl44Card hl56Card" id="hl56CardGuard"><h3>🛡️ Posa di difesa (Protego)<span class="hl55Status" id="hl56GuardStatus">'+'</span></h3>'+
+   '<button type="button" id="hl56GuardBtn">Allena Protego (3 ripetizioni)</button>'+
+   '<p class="hint" id="hl56Guide"></p>'+
+   '<p class="hint">Quando richiesto, porta la bacchetta davanti al viso come per proteggerti e tienila ferma un istante - tre volte di fila.</p></div>'+
+  '<div class="hl44Card hl56Card" id="hl56CardTarget"><h3>🎯 Aggancio / cambio bersaglio<span class="hl55Status" id="hl56TargetStatus"></span></h3>'+
+   '<button type="button" id="hl56TargetBtn">Allena il bersaglio (3 scatti)</button>'+
+   '<p class="hint" id="hl56TargetGuide"></p>'+
+   '<p class="hint">Quando richiesto, dai un colpo secco alla bacchetta in avanti, come per agganciare un bersaglio - tre volte di fila.</p>'+
+   '<button type="button" id="hl56ResetBtn" class="danger">Ripristina entrambe alla calibrazione di fabbrica</button></div>';
+ gyroCard.after(section);
+
+ function syncVisibility(){
+  const current=$('tabs17')?.querySelector('button[aria-current="true"]')?.dataset.tabTarget17;
+  section.hidden=(current!=='play');
+ }
+ $('tabs17')?.addEventListener('click',syncVisibility);
+ syncVisibility();
+
+ function refreshStatus(){
+  let g=null;try{g=JSON.parse(localStorage.getItem('wandGuardVector40')||'null');}catch(e){}
+  $('hl56GuardStatus').textContent=(Array.isArray(g)&&g.length===3)?'✓ personalizzata':'di fabbrica';
+  let t=null;try{t=parseFloat(localStorage.getItem('wandTargetThresh40'));}catch(e){}
+  $('hl56TargetStatus').textContent=Number.isFinite(t)?'✓ personalizzata ('+t.toFixed(1)+' m/s²)':'di fabbrica';
+ }
+ refreshStatus();
+
+ function sensorsReady(){
+  return typeof ready!=='undefined'&&ready&&typeof sensors!=='undefined'&&sensors;
+ }
+
+ async function requestOrientationIfNeeded(){
+  if(typeof DeviceOrientationEvent!=='undefined'&&typeof DeviceOrientationEvent.requestPermission==='function'){
+   if(await DeviceOrientationEvent.requestPermission()!=='granted')throw new Error('Permesso orientamento negato');
+  }
+ }
+ async function requestMotionIfNeeded(){
+  if(typeof DeviceMotionEvent!=='undefined'&&typeof DeviceMotionEvent.requestPermission==='function'){
+   if(await DeviceMotionEvent.requestPermission()!=='granted')throw new Error('Permesso movimento negato');
+  }
+ }
+
+ function reloadSoon(msg){
+  $('hl56Guide').textContent=msg;$('hl56TargetGuide').textContent=msg;
+  setTimeout(()=>location.reload(),1400);
+ }
+
+ // --- Protego: 3 ripetizioni, ciascuna una media di ~20 letture di
+ // orientamento stabili; le tre medie vengono a loro volta mediate. Stessa
+ // idea della vecchia calibrazione di wand40_ui.js (un'unica presa da 25
+ // campioni), ripetuta 3 volte per non dipendere da un tentativo solo. ---
+ const guardBtn=$('hl56GuardBtn'),guardGuide=$('hl56Guide');
+ guardBtn.onclick=async()=>{
+  guardBtn.disabled=true;
+  try{
+   await requestOrientationIfNeeded();
+   if(!sensorsReady()){guardGuide.textContent='Prima collegati e attiva i sensori (prova qui sopra).';guardBtn.disabled=false;return;}
+   const repVectors=[];
+   for(let rep=1;rep<=3;rep++){
+    guardGuide.textContent='Ripetizione '+rep+' di 3 - tieni la posa di difesa ferma…';
+    const vec=await new Promise(resolve=>{
+     const samples=[];
+     function onOrient(){
+      if(typeof latest==='undefined'||!latest)return;
+      samples.push(latest.forward);
+      if(samples.length>=20){
+       window.removeEventListener('deviceorientation',onOrient);
+       resolve(unit(samples.reduce((s,v)=>s.map((x,i)=>x+v[i]),[0,0,0])));
+      }
+     }
+     window.addEventListener('deviceorientation',onOrient);
+    });
+    repVectors.push(vec);
+    if(rep<3){guardGuide.textContent='Ripetizione '+rep+' registrata. Rilassa la presa un istante…';await new Promise(r=>setTimeout(r,900));}
+   }
+   const finalVec=unit(repVectors.reduce((s,v)=>s.map((x,i)=>x+v[i]),[0,0,0]));
+   localStorage.setItem('wandGuardVector40',JSON.stringify(finalVec));
+   refreshStatus();
+   reloadSoon('Protego personalizzato su 3 ripetizioni. Ricarico la pagina per applicarlo…');
+  }catch(e){
+   guardGuide.textContent=e.message||'Allenamento interrotto.';
+  }
+  guardBtn.disabled=false;
+ };
+
+ // --- Bersaglio: 3 scatti, si registra il picco di ciascuno (magnitudine
+ // dell'accelerazione, gravità già rimossa quando il browser la separa da
+ // sé) e si personalizza la soglia al 60% della loro media - un vero
+ // scatto la supera nettamente, un tremolio da fermo no. Stesso raggio
+ // [4,20] m/s² già usato dal cursore manuale di wand40_ui.js. ---
+ const targetBtn=$('hl56TargetBtn'),targetGuide=$('hl56TargetGuide');
+ targetBtn.onclick=async()=>{
+  targetBtn.disabled=true;
+  try{
+   await requestMotionIfNeeded();
+   if(!sensorsReady()){targetGuide.textContent='Prima collegati e attiva i sensori (prova qui sopra).';targetBtn.disabled=false;return;}
+   const peaks=[];
+   for(let rep=1;rep<=3;rep++){
+    targetGuide.textContent='Scatto '+rep+' di 3 - dai un colpo secco alla bacchetta ora…';
+    const peak=await new Promise(resolve=>{
+     let peakMag=0,gEst=null;
+     const deadline=performance.now()+1500;
+     function handler(e){
+      const a=e.acceleration&&e.acceleration.x!=null?e.acceleration:null;
+      let ax,ay,az;
+      if(a){ax=a.x||0;ay=a.y||0;az=a.z||0;}
+      else{
+       const g=e.accelerationIncludingGravity;
+       if(!g||g.x==null)return;
+       if(!gEst)gEst={x:g.x,y:g.y,z:g.z};
+       gEst.x+=(g.x-gEst.x)*.15;gEst.y+=(g.y-gEst.y)*.15;gEst.z+=(g.z-gEst.z)*.15;
+       ax=g.x-gEst.x;ay=g.y-gEst.y;az=g.z-gEst.z;
+      }
+      const mag=Math.hypot(ax,ay,az);
+      if(mag>peakMag)peakMag=mag;
+      if(performance.now()>=deadline){window.removeEventListener('devicemotion',handler);resolve(peakMag);}
+     }
+     window.addEventListener('devicemotion',handler);
+     setTimeout(()=>{window.removeEventListener('devicemotion',handler);resolve(peakMag);},1600);
+    });
+    peaks.push(peak);
+    if(rep<3){targetGuide.textContent='Scatto '+rep+' registrato ('+peak.toFixed(1)+' m/s²). Fermo un istante…';await new Promise(r=>setTimeout(r,700));}
+   }
+   const avgPeak=peaks.reduce((a,b)=>a+b,0)/peaks.length;
+   const personalized=Math.max(4,Math.min(20,avgPeak*0.6));
+   localStorage.setItem('wandTargetThresh40',String(personalized));
+   refreshStatus();
+   reloadSoon('Bersaglio personalizzato ('+personalized.toFixed(1)+' m/s² su 3 scatti). Ricarico la pagina per applicarlo…');
+  }catch(e){
+   targetGuide.textContent=e.message||'Allenamento interrotto.';
+  }
+  targetBtn.disabled=false;
+ };
+
+ $('hl56ResetBtn').onclick=()=>{
+  try{localStorage.removeItem('wandGuardVector40');localStorage.removeItem('wandTargetThresh40');}catch(e){}
+  reloadSoon('Calibrazione di fabbrica ripristinata. Ricarico la pagina…');
+ };
+
+ const infoPanel=$('infoPanel16');
+ if(infoPanel){
+  const h2=infoPanel.querySelector('h2');
+  if(h2)h2.textContent='La bacchetta · LVI';
+  const ul=infoPanel.querySelector('ul');
+  if(ul&&!ul.querySelector('li[data-v="56"]')){
+   const li=document.createElement('li');li.dataset.v='56';
+   li.innerHTML='<b>LVI</b> — nuova scheda "🎯 Allena i tuoi gesti" in Gioca: 3 ripetizioni guidate per personalizzare la posa di Protego e la sensibilità di aggancio/cambio bersaglio sulla propria presa, invece del vecchio pannello unico (ora spostato concettualmente sulla dashboard PC). Un pulsante di ripristino riporta ai valori di fabbrica.';
+   ul.append(li);
+  }
+ }
+ document.title='La bacchetta · LVI';
+ const smallLabel=document.querySelector('.topbar small');if(smallLabel)smallLabel.textContent='ARS MAGICA · LVI';
+})();
+
+</script>
+<script>
 
 (() => {
  'use strict';
