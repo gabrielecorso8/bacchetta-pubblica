@@ -5992,7 +5992,7 @@ document.title='La bacchetta · MVP 7';document.querySelector('.topbar small').t
 // wand_ui.html copre anche le animazioni aggiunte qui, non ne serve una
 // nuova - stessa nota già lasciata da Wand XLII).
 //
-// Cinque potenziamenti, tutti pensati per restare leggeri (pura CSS dove
+// Quattro potenziamenti, tutti pensati per restare leggeri (pura CSS dove
 // possibile, pochi nodi DOM temporanei altrove) e non competere mai con la
 // lettura reale dei sensori durante un combattimento:
 //
@@ -6006,7 +6006,14 @@ document.title='La bacchetta · MVP 7';document.querySelector('.topbar small').t
 //    autore sulla stessa proprietà - animarlo direttamente sarebbe stato
 //    invisibile, sovrascritto in ogni istante dal valore statico. Un
 //    elemento nuovo (`::before`) non ha questo conflitto: nessuna regola
-//    precedente lo tocca.
+//    precedente lo tocca. Il bagliore stesso (`box-shadow`) resta FISSO -
+//    solo la sua `opacity` è animata: animare `box-shadow` di per sé
+//    costringe il telefono a ridisegnare l'ombra ad ogni fotogramma (una
+//    delle animazioni CSS più pesanti che esistano), mentre `opacity` è
+//    "gratis" per la GPU. Stesso effetto visivo, costo molto minore -
+//    corretto da Wand LII dopo un lag continuo segnalato su un vero
+//    telefono con la prima versione (Wand L), che animava il box-shadow
+//    direttamente.
 // 2) LUCE CHE ATTRAVERSA (shimmer): una sottile banda diagonale che
 //    scorre lentissima sopra ciascuna delle quattro illustrazioni (Wand
 //    XLV/XLVI, oggi foto statiche) - un `::after` con `mix-blend-mode:
@@ -6025,17 +6032,12 @@ document.title='La bacchetta · MVP 7';document.querySelector('.topbar small').t
 //    classe/animazione già esistente, solo più istanze coi soliti
 //    parametri casuali. Restano comunque discrete (`opacity` bassa,
 //    `pointer-events:none`), non un effetto invadente.
-// 5) SCOPPIO COLORATO AL LANCIO RIUSCITO: il lampo a schermo intero
-//    (`#flash`.fire) già scatta ad ogni incantesimo lanciato (base,
-//    Protego, magia antica, glifo/voce), con un colore diverso per tipo
-//    (variabile CSS `--spell`, impostata sempre appena prima del lampo).
-//    Un `MutationObserver` sulla classe di `#flash` - mai un rimpiazzo dei
-//    cinque punti diversi del codice che oggi attivano il lampo - osserva
-//    quel momento da fuori e fa esplodere scintille colorate dello stesso
-//    colore dal centro schermo: lo stesso effetto delle scintille sui
-//    pulsanti, ma legato al LANCIO riuscito invece che al solo tocco, e
-//    colorato in base all'incantesimo. Riusa il keyframe hl42Spark già
-//    esistente (trasla ed evapora), non ne serve uno nuovo.
+//
+// Un quinto effetto (scintille colorate dal centro schermo ad ogni
+// incantesimo lanciato) è stato aggiunto qui e poi tolto del tutto da
+// Wand LII, non solo nascosto: vedi il commento di Wand LII in fondo al
+// file per il perché di questa eccezione alla regola "mai toccare un file
+// precedente".
 (() => {
  'use strict';
  const $=id=>document.getElementById(id);
@@ -6054,8 +6056,8 @@ document.title='La bacchetta · MVP 7';document.querySelector('.topbar small').t
  /* --- 1) Bagliore respirante, su un ::before dedicato (vedi nota sopra sul
     perché non sul box-shadow del pulsante stesso). --- */
  #bigGrid25 button{position:relative}
- #bigGrid25 button::before{content:'';position:absolute;inset:-3px;border-radius:inherit;pointer-events:none;z-index:1;animation:hl50BtnGlow 3.2s ease-in-out infinite}
- @keyframes hl50BtnGlow{0%,100%{box-shadow:0 0 10px 1px rgba(201,162,74,.22)}50%{box-shadow:0 0 24px 6px rgba(240,207,122,.58)}}
+ #bigGrid25 button::before{content:'';position:absolute;inset:-3px;border-radius:inherit;pointer-events:none;z-index:1;box-shadow:0 0 24px 6px rgba(240,207,122,.58);animation:hl50BtnGlow 3.2s ease-in-out infinite}
+ @keyframes hl50BtnGlow{0%,100%{opacity:.35}50%{opacity:1}}
  #bigGrid25 #bigSquare25::before{animation-delay:.8s}
  #bigGrid25 #modeAncient::before{animation-delay:1.6s}
  #bigGrid25 #dodgeBtn18::before{animation-delay:2.4s}
@@ -6073,12 +6075,6 @@ document.title='La bacchetta · MVP 7';document.querySelector('.topbar small').t
     esistente di Wand XLII: stesso keyframe, solo più istanze). --- */
  .hl50-ring{position:fixed;width:14px;height:14px;margin:-7px 0 0 -7px;border-radius:50%;border:2px solid var(--hl42-gold-bright,#f0cf7a);pointer-events:none;z-index:69;animation:hl50Ring .5s ease-out forwards}
  @keyframes hl50Ring{0%{transform:scale(.4);opacity:.7}100%{transform:scale(3.6);opacity:0}}
-
- /* --- 5) Scintille colorate al lancio riuscito: stesso keyframe hl42Spark
-    di Wand XLII, colore impostato dinamicamente in linea per ogni punto
-    (var CSS non adatta qui: il colore cambia ad ogni lancio, non è un
-    tema fisso). --- */
- .hl50-castspark{position:fixed;width:5px;height:5px;border-radius:50%;pointer-events:none;z-index:71;animation:hl42Spark .65s ease-out forwards}
  `;
  document.head.append(style);
 
@@ -6127,39 +6123,6 @@ document.title='La bacchetta · MVP 7';document.querySelector('.topbar small').t
   document.body.append(ember);
  }
 
- // --- 5) Scoppio colorato al lancio riuscito: osserva dall'esterno la
- // classe di #flash (mai un rimpiazzo dei cinque punti del codice che oggi
- // la attivano - basta e avanza reagire al cambiamento). ---
- function spawnCastBurst50(color){
-  const cx=window.innerWidth/2,cy=window.innerHeight*0.42;
-  const n=16;
-  for(let i=0;i<n;i++){
-   const s=document.createElement('span');
-   s.className='hl50-castspark';
-   const angle=(Math.PI*2*i)/n+Math.random()*0.4;
-   const dist=70+Math.random()*90;
-   s.style.left=cx+'px';s.style.top=cy+'px';
-   s.style.background=color;
-   s.style.boxShadow='0 0 8px 2px '+color;
-   s.style.setProperty('--hl42dx',(Math.cos(angle)*dist).toFixed(1)+'px');
-   s.style.setProperty('--hl42dy',(Math.sin(angle)*dist).toFixed(1)+'px');
-   document.body.append(s);
-   s.addEventListener('animationend',()=>s.remove());
-  }
- }
- const flashEl=$('flash');
- if(flashEl){
-  let wasFiring50=flashEl.classList.contains('fire');
-  new MutationObserver(()=>{
-   const isFiring=flashEl.classList.contains('fire');
-   if(isFiring&&!wasFiring50){
-    const color=(document.documentElement.style.getPropertyValue('--spell')||'').trim()||'#f0cf7a';
-    spawnCastBurst50(color);
-   }
-   wasFiring50=isFiring;
-  }).observe(flashEl,{attributes:true,attributeFilter:['class']});
- }
-
  const infoPanel=$('infoPanel16');
  if(infoPanel){
   const h2=infoPanel.querySelector('h2');
@@ -6167,13 +6130,67 @@ document.title='La bacchetta · MVP 7';document.querySelector('.topbar small').t
   const ul=infoPanel.querySelector('ul');
   if(ul&&!ul.querySelector('li[data-v="50"]')){
    const li=document.createElement('li');li.dataset.v='50';
-   li.innerHTML='<b>L</b> — più magia a schermo: i quattro pulsanti principali guadagnano un bagliore che respira e un riflesso di luce che li attraversa lentamente; premerli fa comparire anche un anello che si espande, oltre alle scintille già presenti; le braci di sottofondo triplicano; ogni incantesimo lanciato con successo fa esplodere scintille colorate dal centro schermo, dello stesso colore del lampo che già lo accompagnava.';
+   li.innerHTML='<b>L</b> — più magia a schermo: i quattro pulsanti principali guadagnano un bagliore che respira e un riflesso di luce che li attraversa lentamente; premerli fa comparire anche un anello che si espande, oltre alle scintille già presenti; le braci di sottofondo triplicano. <i>(Un quinto effetto qui descritto in origine - scintille colorate dal centro schermo ad ogni incantesimo lanciato - è stato tolto da Wand LII: vedi il changelog LII.)</i>';
    ul.append(li);
   }
  }
  document.title='La bacchetta · L';
  const smallLabel=document.querySelector('.topbar small');if(smallLabel)smallLabel.textContent='ARS MAGICA · L';
 })();
+
+// ---------------------------------------------------------------------
+// NOTA DI WAND LII - unica eccezione, in tutto il progetto, alla regola
+// "mai toccare un file precedente, solo aggiungerne di nuovi":
+//
+// Wand LI aveva già "tolto" l'effetto 5 (scintille colorate al lancio)
+// nascondendolo via `.hl50-castspark{opacity:0!important}` in un file
+// successivo (wand51_ui.js), apposta per non toccare questo file - la
+// via giusta finché il problema era solo estetico ("non mi piace questo
+// effetto").
+//
+// Ma poi è arrivata una segnalazione diversa: "L'animazione trasparente
+// c'è ancora e lagga continuamente". Nascondere con `opacity:0` rende
+// l'effetto invisibile, ma NON smette di eseguirlo: ad ogni incantesimo
+// lanciato, questo file creava comunque 16 nodi DOM, ne animava le
+// proprietà, e li rimuoveva un attimo dopo - lavoro reale della CPU/GPU
+// del telefono, a schermo o non a schermo. Un file successivo che si
+// limita a un `opacity:0!important` non può correggere un costo che nasce
+// dall'ESECUZIONE di JavaScript in QUESTO file: può solo mascherarne il
+// risultato visivo, non evitare il lavoro. Per questo, ecco l'eccezione:
+// invece di aggiungere un wand52_ui.js che tenta di disattivare da fuori
+// una funzione e un MutationObserver già avviati qui (fragile, e comunque
+// non eliminerebbe il costo di aver creato l'osservatore stesso), Wand
+// LII rimuove qui, alla radice, la funzione `spawnCastBurst50`, il blocco
+// `MutationObserver` su `#flash` e la regola CSS `.hl50-castspark` - il
+// codice che li nascondeva in wand51_ui.js resta al suo posto (innocuo,
+// ora semplicemente non ha più nulla da nascondere: nessun elemento
+// `.hl50-castspark` viene più creato).
+//
+// La stessa segnalazione di lag ha anche spinto a rivedere l'effetto 1
+// (bagliore respirante): animava `box-shadow` direttamente, una delle
+// proprietà CSS più costose da ridisegnare (forza un repaint completo ad
+// ogni fotogramma, su 4 pulsanti, in un ciclo che non si ferma mai). Corretto
+// qui sopra lasciando il `box-shadow` FISSO sullo pseudo-elemento e
+// animando solo `opacity` (compositata dalla GPU, non causa repaint) - a
+// occhio l'effetto "respira" allo stesso modo, ma il telefono non deve
+// più ridisegnare l'ombra 60 volte al secondo.
+//
+// Prova pratica di come si è arrivati a capire quale dei due fosse la
+// causa più probabile del lag CONTINUO: uno script Playwright ha simulato
+// 15 lanci ravvicinati (180ms l'uno dall'altro) e verificato quanti nodi
+// `.hl50-castspark` fossero vivi in ogni istante - mai più di 16 (cioè un
+// solo scoppio), perché il `MutationObserver` osserva `classList` e un
+// `remove('fire')` seguito subito da `add('fire')` nello stesso script
+// sincrono non genera mai uno stato intermedio osservabile: il browser
+// notifica una sola volta per "giro di eventi", non una volta per singola
+// modifica. Quindi lo scoppio-lancio, da solo, non poteva essere la fonte
+// di un lag *continuo* (ripetuto) - ma il bagliore che anima `box-shadow`
+// in un ciclo `infinite` su 4 pulsanti sì: gira per sempre, dal momento in
+// cui la pagina si apre, senza bisogno di alcuna azione dell'utente. Da
+// qui la scelta di correggere entrambi, ma di rimuovere del tutto (non
+// solo nascondere) solo l'effetto 5, dato che l'utente lo aveva comunque
+// già rifiutato esteticamente con Wand LI.
+// ---------------------------------------------------------------------
 
 </script>
 <script>
