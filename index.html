@@ -6790,6 +6790,49 @@ document.title='La bacchetta · MVP 7';document.querySelector('.topbar small').t
 
 </script>
 <script>
+// Wand LVIII: rimosso lo "shimmer" (Wand L, punto 2 del commento in testa a
+// wand50_ui.js) - la sottile banda di luce diagonale che attraversa ognuno
+// dei 4 pulsanti principali ogni 7 secondi. Non piaceva ("un effetto
+// semitrasparente che va veloce sullo schermo, tipo effetto riflesso").
+//
+// A differenza del caso di Wand LI/LII (lo scoppio di scintille, che
+// creava e ripuliva nodi DOM veri ad ogni lancio - nascondere via CSS non
+// bastava a fermarne il costo), questo effetto è puro CSS su uno
+// pseudo-elemento già esistente (`#bigGrid25 button::after`), senza alcun
+// nodo creato/distrutto né alcun MutationObserver dietro le quinte:
+// fermare qui l'animazione con `animation:none` la ferma DAVVERO, non solo
+// alla vista - nessuna eccezione al file precedente necessaria questa
+// volta, la convenzione "nascondi, non cancellare" basta da sola.
+(() => {
+ 'use strict';
+ const $=id=>document.getElementById(id);
+ if(document.body.dataset.edition58==='1')return;
+ document.body.dataset.edition58='1';
+ if(document.body.dataset.edition56!=='1')return;
+
+ const style=document.createElement('style');
+ style.textContent=`
+ #bigGrid25 button::after{animation:none!important;background:none!important}
+ `;
+ document.head.append(style);
+
+ const infoPanel=$('infoPanel16');
+ if(infoPanel){
+  const h2=infoPanel.querySelector('h2');
+  if(h2)h2.textContent='La bacchetta · LVIII';
+  const ul=infoPanel.querySelector('ul');
+  if(ul&&!ul.querySelector('li[data-v="58"]')){
+   const li=document.createElement('li');li.dataset.v='58';
+   li.innerHTML='<b>LVIII</b> — tolta la luce che attraversava i 4 pulsanti principali ogni 7 secondi (Wand L): non piaceva. Il bagliore respirante (corretto per il lag da Wand LII) e lo scoppio alla pressione restano invariati.';
+   ul.append(li);
+  }
+ }
+ document.title='La bacchetta · LVIII';
+ const smallLabel=document.querySelector('.topbar small');if(smallLabel)smallLabel.textContent='ARS MAGICA · LVIII';
+})();
+
+</script>
+<script>
 
 (() => {
  'use strict';
