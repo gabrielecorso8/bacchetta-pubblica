@@ -4758,6 +4758,7 @@ document.title='La bacchetta · MVP 7';document.querySelector('.topbar small').t
  // ============================================================
  let guardVector40=null;
  try{const saved=JSON.parse(localStorage.getItem('wandGuardVector40')||'null');if(Array.isArray(saved)&&saved.length===3&&saved.every(Number.isFinite))guardVector40=saved;}catch(e){}
+ let gameplayPaused40=false;
  let protegoEngaged40=false;
  const badge=document.createElement('div');badge.id='protegoBadge40';badge.textContent='🛡 PROTEGO';
  document.body.append(badge);
@@ -4786,6 +4787,7 @@ document.title='La bacchetta · MVP 7';document.querySelector('.topbar small').t
  const GUARD_ENGAGE_DEG=26,GUARD_RELEASE_DEG=38; // isteresi: non tarata in gioco, vedi README_WAND40.md
  const GUARD_ENGAGE_DOT=Math.cos(GUARD_ENGAGE_DEG*Math.PI/180),GUARD_RELEASE_DOT=Math.cos(GUARD_RELEASE_DEG*Math.PI/180);
  setInterval(()=>{
+  if(gameplayPaused40){if(protegoEngaged40)disengageProtego40();return;}
   if(!ready||!guardVector40||!latest||performance.now()-sampleAt>500){if(protegoEngaged40)disengageProtego40();return;}
   const d=dot(latest.forward,guardVector40);
   if(!protegoEngaged40&&d>=GUARD_ENGAGE_DOT&&wandMode!=='basic'&&wandMode!=='spell')engageProtego40();
@@ -4836,7 +4838,7 @@ document.title='La bacchetta · MVP 7';document.querySelector('.topbar small').t
  // movimento serve a LANCIARE, non a guardarsi intorno) o mentre Protego è
  // agganciato (si resta fermi a proteggersi, non si guarda in giro).
  // ============================================================
- function cameraIdle40(){return wandMode!=='basic'&&wandMode!=='spell'&&!protegoEngaged40;}
+ function cameraIdle40(){return !gameplayPaused40&&wandMode!=='basic'&&wandMode!=='spell'&&!protegoEngaged40;}
  let lastCamPoint40=null;
  window.addEventListener('deviceorientation',()=>{
   if(!ready||!base||!filtered||!latest||!cameraIdle40()){lastCamPoint40=null;return;}
@@ -4888,7 +4890,7 @@ document.title='La bacchetta · MVP 7';document.querySelector('.topbar small').t
   const outOfScreen=cross(latest.right,latest.forward);
   return [0,1,2].map(i=>ax*latest.right[i]+ay*latest.forward[i]+az*outOfScreen[i]);
  }
- function targetGestureIdle40(){return !protegoEngaged40&&wandMode!=='basic'&&wandMode!=='spell'&&!recording;}
+ function targetGestureIdle40(){return !gameplayPaused40&&!protegoEngaged40&&wandMode!=='basic'&&wandMode!=='spell'&&!recording;}
  function pulseStick40(x,y){
   transportSend({type:'wand_stick',x,y});
   setTimeout(()=>transportSend({type:'wand_stick',x:0,y:0}),90);
@@ -4912,6 +4914,7 @@ document.title='La bacchetta · MVP 7';document.querySelector('.topbar small').t
  // da wand34_ui.js: non duplicata concettualmente, solo con nome proprio
  // di questo file per restare indipendente dalla chiusura di quel pannello.
  function onAccelMotion40(e){
+  if(gameplayPaused40)return;
   const raw=e.acceleration&&e.acceleration.x!==null?e.acceleration:null;
   let ax,ay,az;
   if(raw){ax=raw.x||0;ay=raw.y||0;az=raw.z||0;}
@@ -4930,15 +4933,25 @@ document.title='La bacchetta · MVP 7';document.querySelector('.topbar small').t
  // già esistente (addEventListener, mai una sostituzione del gestore
  // primario che chiede il permesso dell'orientamento) - un solo tocco
  // dell'utente chiede entrambi i permessi separati richiesti da iOS.
- sensorsBtn.addEventListener('click',async()=>{
-  if(accelReady40)return;
-  try{
-   if(typeof DeviceMotionEvent==='undefined')return; // niente accelerometro su questo browser: il resto della bacchetta funziona comunque
-   if(DeviceMotionEvent.requestPermission&&await DeviceMotionEvent.requestPermission()!=='granted')return;
-   window.addEventListener('devicemotion',onAccelMotion40);
-   accelReady40=true;
-  }catch(e){/* permesso negato o non disponibile: nessun errore bloccante */}
- });
+ async function enableAccel40(){
+  if(accelReady40)return true;
+  if(typeof DeviceMotionEvent==='undefined')throw new Error('Accelerometro non disponibile su questo browser');
+  if(DeviceMotionEvent.requestPermission&&await DeviceMotionEvent.requestPermission()!=='granted')throw new Error('Permesso accelerometro negato');
+  window.addEventListener('devicemotion',onAccelMotion40);
+  accelReady40=true;
+  return true;
+ }
+ window.wandEnableAccel40=enableAccel40;
+ window.wandSetGameplayPaused40=paused=>{
+  gameplayPaused40=!!paused;
+  if(gameplayPaused40){
+   armed40=true;
+   gEst40=null;
+   lastCamPoint40=null;
+   if(protegoEngaged40)disengageProtego40();
+  }
+ };
+ sensorsBtn.addEventListener('click',()=>{enableAccel40().catch(()=>{});});
 
  if(secBacchetta){
   const threshBox=document.createElement('div');threshBox.className='guardBox40';
@@ -6537,6 +6550,7 @@ document.title='La bacchetta · MVP 7';document.querySelector('.topbar small').t
  const micOk={v:false},gyroOk={v:false},accelOk={v:false};
  function markOk(status,flag){
   status.textContent='✓ funziona';status.dataset.ok='1';flag.v=true;
+  window.wandSetGameplayPaused40?.(false);
   if(micOk.v&&gyroOk.v&&accelOk.v)$('hl55Ready').hidden=false;
  }
 
@@ -6564,6 +6578,36 @@ document.title='La bacchetta · MVP 7';document.querySelector('.topbar small').t
   }
  }
 
+ async function waitForOrientationSample55(){
+  const deadline=performance.now()+2500;
+  while(performance.now()<deadline){
+   if(typeof latest!=='undefined'&&latest&&typeof sampleAt!=='undefined'&&performance.now()-sampleAt<1000)return true;
+   await new Promise(resolve=>setTimeout(resolve,50));
+  }
+  throw new Error('Sensore autorizzato, ma non arrivano dati: muovi il telefono e controlla i permessi di Safari.');
+ }
+
+ async function activateGameplaySensors55(withMotion=false){
+  if(typeof ready!=='undefined'&&!ready)throw new Error('Bridge non collegato: attendi lo stato "Collegato".');
+  if(!window.isSecureContext)throw new Error('Apri la bacchetta pubblica in HTTPS.');
+  await requestMotionAccess(window.DeviceOrientationEvent);
+  // This is the shared flag read by the base orientation pipeline and by
+  // the training screen. The visible sensor cards must activate the same
+  // pipeline, not a parallel test-only state.
+  sensors=true;
+  const baseStatus=$('sensorStatus');
+  if(baseStatus)baseStatus.textContent='Sensore autorizzato · attendo i campioni…';
+  if(withMotion){
+   await requestMotionAccess(window.DeviceMotionEvent);
+   if(typeof window.wandEnableAccel40!=='function')throw new Error('Modulo accelerometro non caricato: ricarica la pagina pubblica.');
+   await window.wandEnableAccel40();
+  }
+  await waitForOrientationSample55();
+  if(baseStatus)baseStatus.textContent='Sensori attivi · dati ricevuti';
+  return true;
+ }
+ window.wandActivateGameplaySensors55=activateGameplaySensors55;
+
  // --- Giroscopo: lettura live di alpha/beta/gamma, test superato al primo
  // scarto ampio rispetto alla prima lettura (un vero movimento della mano,
  // non il minimo rumore del sensore fermo sul tavolo). ---
@@ -6579,11 +6623,12 @@ document.title='La bacchetta · MVP 7';document.querySelector('.topbar small').t
  }
  gyroBtn.onclick=async()=>{
   gyroBtn.disabled=true;gyroStatus.textContent='attivazione…';
+  window.wandSetGameplayPaused40?.(true);
   try{
-   await requestMotionAccess(window.DeviceOrientationEvent);
+   await activateGameplaySensors55(false);
    window.addEventListener('deviceorientation',onOrientation55);
    gyroStatus.textContent='ruota il telefono…';
-  }catch(e){gyroStatus.textContent=e.message;}
+  }catch(e){gyroStatus.textContent=e.message;window.wandSetGameplayPaused40?.(false);}
   gyroBtn.disabled=false;
  };
 
@@ -6605,11 +6650,12 @@ document.title='La bacchetta · MVP 7';document.querySelector('.topbar small').t
  }
  accelBtn.onclick=async()=>{
   accelBtn.disabled=true;accelStatus.textContent='attivazione…';
+  window.wandSetGameplayPaused40?.(true);
   try{
-   await requestMotionAccess(window.DeviceMotionEvent);
+   await activateGameplaySensors55(true);
    window.addEventListener('devicemotion',onMotion55);
    accelStatus.textContent='agita il telefono…';
-  }catch(e){accelStatus.textContent=e.message;}
+  }catch(e){accelStatus.textContent=e.message;window.wandSetGameplayPaused40?.(false);}
   accelBtn.disabled=false;
  };
 
@@ -6671,7 +6717,7 @@ document.title='La bacchetta · MVP 7';document.querySelector('.topbar small').t
  section.dataset.tab17='play';
  section.innerHTML=
   '<h2>🎯 Allena i tuoi gesti</h2>'+
-  '<p class="hint">Personalizza Protego e l\'aggancio bersaglio sulla tua presa - 3 ripetizioni bastano, poi ricarica da sola per applicarle. Richiede i sensori già provati qui sopra.</p>'+
+  '<p class="hint">Personalizza Protego e l\'aggancio bersaglio sulla tua presa - 3 ripetizioni bastano, poi ricarica da sola per applicarle. Al primo uso i sensori si attivano automaticamente.</p>'+
   '<div class="hl44Card hl56Card" id="hl56CardGuard"><h3>🛡️ Posa di difesa (Protego)<span class="hl55Status" id="hl56GuardStatus">'+'</span></h3>'+
    '<button type="button" id="hl56GuardBtn">Allena Protego (3 ripetizioni)</button>'+
    '<p class="hint" id="hl56Guide"></p>'+
@@ -6698,19 +6744,9 @@ document.title='La bacchetta · MVP 7';document.querySelector('.topbar small').t
  }
  refreshStatus();
 
- function sensorsReady(){
-  return typeof ready!=='undefined'&&ready&&typeof sensors!=='undefined'&&sensors;
- }
-
- async function requestOrientationIfNeeded(){
-  if(typeof DeviceOrientationEvent!=='undefined'&&typeof DeviceOrientationEvent.requestPermission==='function'){
-   if(await DeviceOrientationEvent.requestPermission()!=='granted')throw new Error('Permesso orientamento negato');
-  }
- }
- async function requestMotionIfNeeded(){
-  if(typeof DeviceMotionEvent!=='undefined'&&typeof DeviceMotionEvent.requestPermission==='function'){
-   if(await DeviceMotionEvent.requestPermission()!=='granted')throw new Error('Permesso movimento negato');
-  }
+ async function ensureTrainingSensors56(withMotion){
+  if(typeof window.wandActivateGameplaySensors55!=='function')throw new Error('Modulo sensori non caricato: ricarica la pagina pubblica.');
+  return window.wandActivateGameplaySensors55(withMotion);
  }
 
  function reloadSoon(msg){
@@ -6725,9 +6761,9 @@ document.title='La bacchetta · MVP 7';document.querySelector('.topbar small').t
  const guardBtn=$('hl56GuardBtn'),guardGuide=$('hl56Guide');
  guardBtn.onclick=async()=>{
   guardBtn.disabled=true;
+  window.wandSetGameplayPaused40?.(true);
   try{
-   await requestOrientationIfNeeded();
-   if(!sensorsReady()){guardGuide.textContent='Prima collegati e attiva i sensori (prova qui sopra).';guardBtn.disabled=false;return;}
+   await ensureTrainingSensors56(false);
    const repVectors=[];
    for(let rep=1;rep<=3;rep++){
     guardGuide.textContent='Ripetizione '+rep+' di 3 - tieni la posa di difesa ferma…';
@@ -6752,8 +6788,10 @@ document.title='La bacchetta · MVP 7';document.querySelector('.topbar small').t
    reloadSoon('Protego personalizzato su 3 ripetizioni. Ricarico la pagina per applicarlo…');
   }catch(e){
    guardGuide.textContent=e.message||'Allenamento interrotto.';
+  }finally{
+   window.wandSetGameplayPaused40?.(false);
+   guardBtn.disabled=false;
   }
-  guardBtn.disabled=false;
  };
 
  // --- Bersaglio: 3 scatti, si registra il picco di ciascuno (magnitudine
@@ -6764,9 +6802,9 @@ document.title='La bacchetta · MVP 7';document.querySelector('.topbar small').t
  const targetBtn=$('hl56TargetBtn'),targetGuide=$('hl56TargetGuide');
  targetBtn.onclick=async()=>{
   targetBtn.disabled=true;
+  window.wandSetGameplayPaused40?.(true);
   try{
-   await requestMotionIfNeeded();
-   if(!sensorsReady()){targetGuide.textContent='Prima collegati e attiva i sensori (prova qui sopra).';targetBtn.disabled=false;return;}
+   await ensureTrainingSensors56(true);
    const peaks=[];
    for(let rep=1;rep<=3;rep++){
     targetGuide.textContent='Scatto '+rep+' di 3 - dai un colpo secco alla bacchetta ora…';
@@ -6801,8 +6839,10 @@ document.title='La bacchetta · MVP 7';document.querySelector('.topbar small').t
    reloadSoon('Bersaglio personalizzato ('+personalized.toFixed(1)+' m/s² su 3 scatti). Ricarico la pagina per applicarlo…');
   }catch(e){
    targetGuide.textContent=e.message||'Allenamento interrotto.';
+  }finally{
+   window.wandSetGameplayPaused40?.(false);
+   targetBtn.disabled=false;
   }
-  targetBtn.disabled=false;
  };
 
  $('hl56ResetBtn').onclick=()=>{
@@ -7237,6 +7277,91 @@ document.title='La bacchetta · MVP 7';document.querySelector('.topbar small').t
  }
  document.title='La bacchetta · LXIV';
  const smallLabel=document.querySelector('.topbar small');if(smallLabel)smallLabel.textContent='ARS MAGICA · LXIV';
+})();
+
+</script>
+<script>
+// Wand LXVI: pannello operativo unico.
+//
+// Il bridge può esporre più dispositivi con lo stesso nome e può ricordare
+// l'attivazione scelta dal giocatore. Qui la dashboard mostra quello stato
+// reale; il telefono continua a essere solo la bacchetta.
+(() => {
+ 'use strict';
+ const $=id=>document.getElementById(id);
+ if(document.body.dataset.edition64==='1')return;
+ document.body.dataset.edition64='1';
+
+ const nativeButton=$('pad')?.nextElementSibling;
+ const armButton=$('arm');
+ const padStatus=$('padStatus');
+ if(!nativeButton||!armButton||!padStatus)return;
+
+ const rememberLabel=document.createElement('label');
+ rememberLabel.className='hint';
+ rememberLabel.style.display='block';
+ rememberLabel.innerHTML='<input id="rememberSetup" type="checkbox" checked> Ricorda output e joypad per i prossimi avvii';
+ nativeButton.after(rememberLabel);
+ const remember=$('rememberSetup');
+ padStatus.textContent='Dopo l’attivazione, muovi l’analogico o premi L1 una volta: verrà scelto il joypad fisico.';
+
+ armButton.onclick=()=>send({type:'arm',enabled:!armed,remember:!!remember.checked});
+ nativeButton.onclick=()=>{
+  nativeEnabled=!nativeEnabled;
+  padActive=false;
+  send({type:'native_pad',enabled:nativeEnabled,protect:Number($('protectButton').value),dodge:Number($('dodgeButton').value),look_lock:Number($('targetButton').value),jump:Number($('jumpButton').value),remember:!!remember.checked});
+  nativeButton.textContent=nativeEnabled?'Disattiva joypad nativo':'Attiva joypad nativo Windows';
+  padStatus.textContent=nativeEnabled?'In attesa: muovi l’analogico o premi un pulsante per selezionare il joypad fisico.':'Joypad nativo disattivato.';
+ };
+
+ function showNative(native){
+  if(!native)return;
+  if(typeof native.protect==='number')$('protectButton').value=String(native.protect);
+  if(typeof native.dodge==='number')$('dodgeButton').value=String(native.dodge);
+  if(typeof native.look_lock==='number')$('targetButton').value=String(native.look_lock);
+  if(typeof native.jump==='number')$('jumpButton').value=String(native.jump);
+  if(typeof native.enabled==='boolean'){
+   nativeEnabled=native.enabled;
+   nativeButton.textContent=nativeEnabled?'Disattiva joypad nativo':'Attiva joypad nativo Windows';
+  }
+  if(native.controller_status)padStatus.textContent=native.controller_status;
+ }
+
+ // The base page installs its WebSocket handler when the user connects, so
+ // attach a small observer to each new socket instead of replacing that
+ // handler or introducing a second connection.
+ let observedSocket=null;
+ const observeSocket=()=>{
+  if(!socket||socket===observedSocket)return;
+  observedSocket=socket;
+  const previous=socket.onmessage;
+  socket.onmessage=function(event){
+   previous?.call(this,event);
+   try{
+    const data=JSON.parse(event.data);
+    if(data.type==='hello')showNative(data.native);
+    if(data.type==='native_status'||data.type==='pad_status'){
+     if(data.status)padStatus.textContent=data.status;
+     showNative(data.native);
+    }
+   }catch(e){}
+  };
+ };
+ setInterval(observeSocket,80);
+
+ const infoPanel=$('infoPanel16');
+ if(infoPanel){
+  const h2=infoPanel.querySelector('h2');
+  if(h2)h2.textContent='La bacchetta · LXVI';
+  const ul=infoPanel.querySelector('ul');
+  if(ul&&!ul.querySelector('li[data-v="64"]')){
+   const li=document.createElement('li');li.dataset.v='64';
+   li.innerHTML='<b>LXVI</b> — dashboard PC con diagnostica del joypad fisico, selezione automatica tra dispositivi duplicati e preferenza opzionale per ripristinare output e joypad ai successivi avvii.';
+   ul.append(li);
+  }
+ }
+ document.title='La bacchetta · LXVI';
+ const smallLabel=document.querySelector('.topbar small');if(smallLabel)smallLabel.textContent='ARS MAGICA · LXVI';
 })();
 
 </script>
