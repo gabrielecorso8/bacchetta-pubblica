@@ -6942,6 +6942,85 @@ document.title='La bacchetta · MVP 7';document.querySelector('.topbar small').t
 
 </script>
 <script>
+// Wand LXII: il codice del pannello di avvio si inserisce direttamente
+// nella schermata principale della pagina pubblica, non più in
+// "Impostazioni -> Avanzate -> Cabina di controllo" come diceva Wand LX -
+// quella scheda era già stata nascosta da tempo (Wand LIV, "impostazioni
+// semplificate": Incantesimi/Bacchetta/Avanzate spariscono dal telefono,
+// bloccate non cancellate) e non è mai più stata raggiungibile. Un errore
+// mio nello scrivere Wand LX: ho dato per scontato che quella scheda
+// esistesse ancora sul telefono, senza controllare le versioni precedenti
+// dello stesso lavoro.
+//
+// Rimedio: niente Impostazioni. Il campo per il codice vive proprio
+// accanto al riquadro "Indirizzo del PC" che il bundle standalone mostra
+// già in cima alla pagina, e un pulsante "Salva e collega" richiama
+// direttamente il collegamento automatico di wand60_ui.js (il suo
+// pulsante "Riprova collegamento automatico", riusato invece che
+// duplicare la stessa logica una seconda volta).
+(() => {
+ 'use strict';
+ const $=id=>document.getElementById(id);
+ if(document.body.dataset.edition62==='1')return;
+ document.body.dataset.edition62='1';
+ if(document.body.dataset.edition60!=='1')return;
+
+ const TOKEN_KEY='hogwartsLauncherToken';
+
+ function init(){
+  // Stesso identico segnale di wand60_ui.js: solo sul bundle standalone.
+  const hostBox=document.getElementById('pcHostOverride');
+  if(!hostBox)return;
+
+  const msg=document.getElementById('autoConnect60Msg');
+  if(!msg||document.getElementById('launcherTokenInput62'))return;
+
+  let savedToken='';
+  try{savedToken=localStorage.getItem(TOKEN_KEY)||'';}catch(e){}
+
+  const box=document.createElement('div');
+  box.style.cssText='margin:10px 0;padding:10px;border:1px solid #57616a;border-radius:10px;background:#1d303b;color:inherit';
+  box.innerHTML=
+   '<label style="display:block;font-size:.9em">Codice del pannello di avvio (quello dopo # nel link che '+
+   'wand_launcher_START.cmd stampa sul PC)<br>'+
+   '<input id="launcherTokenInput62" type="password" autocomplete="off" placeholder="codice" '+
+   'style="width:100%;box-sizing:border-box;margin-top:4px" value="'+
+   savedToken.replace(/&/g,'&amp;').replace(/"/g,'&quot;')+'"></label>'+
+   '<button id="launcherTokenSave62" type="button" style="margin-top:8px">Salva e collega</button>';
+
+  msg.before(box);
+
+  const input=box.querySelector('#launcherTokenInput62');
+  const saveBtn=box.querySelector('#launcherTokenSave62');
+  input.oninput=()=>{try{localStorage.setItem(TOKEN_KEY,input.value.trim());}catch(e){}};
+  saveBtn.onclick=()=>{
+   try{localStorage.setItem(TOKEN_KEY,input.value.trim());}catch(e){}
+   // Il pulsante "Riprova collegamento automatico" di wand60_ui.js è
+   // sempre l'elemento subito dopo il messaggio di stato - richiamarlo
+   // invece di reimplementare qui una seconda volta la stessa chiamata.
+   const retryBtn=msg.nextElementSibling;
+   if(retryBtn&&retryBtn.tagName==='BUTTON')retryBtn.click();
+  };
+ }
+
+ if(document.readyState==='complete')init();
+ else window.addEventListener('load',init);
+
+ const infoPanel=$('infoPanel16');
+ if(infoPanel){
+  const ul=infoPanel.querySelector('ul');
+  if(ul&&!ul.querySelector('li[data-v="62"]')){
+   const li=document.createElement('li');li.dataset.v='62';
+   li.innerHTML='<b>LXII</b> — sulla pagina pubblica: il codice del pannello di avvio si incolla direttamente '+
+    'nella schermata principale, vicino all\'indirizzo del PC - non serve più cercarlo in Impostazioni (la '+
+    'scheda "Avanzate" non è più raggiungibile dal telefono da Wand LIV).';
+   ul.append(li);
+  }
+ }
+})();
+
+</script>
+<script>
 
 (() => {
  'use strict';
