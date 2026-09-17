@@ -6863,10 +6863,22 @@ document.title='La bacchetta · MVP 7';document.querySelector('.topbar small').t
  const DEFAULT_LAUNCHER_PORT='8090';
 
  function currentPcHost(){
+  // Wand LXIII: bug reale - questo stesso campo (HOST_KEY) serve anche a
+  // build_standalone_bundle.py per il WebSocket del bridge vero, la cui
+  // porta di default (8443) è mostrata nel placeholder del campo
+  // ("192.168.1.20:8443"). Chi segue quell'esempio scrive l'indirizzo
+  // CON quella porta - e prima di questa correzione, se il campo
+  // conteneva già una porta, la si riusava tale e quale anche per il
+  // pannello di avvio, che però ascolta su una porta diversa (8090). Il
+  // risultato era un fetch verso la porta sbagliata, fallito con
+  // "impossibile contattare il pannello" anche a pannello acceso e
+  // configurazione corretta. Ora si tiene sempre e solo l'indirizzo,
+  // scartando qualunque porta scritta lì per il bridge: la porta del
+  // pannello è sempre e solo quella di wand_launcher.py.
   let saved='';
   try{saved=(localStorage.getItem(HOST_KEY)||'').trim();}catch(e){}
-  if(saved)return saved.includes(':')?saved:saved+':'+DEFAULT_LAUNCHER_PORT;
-  return location.hostname+':'+DEFAULT_LAUNCHER_PORT;
+  const host=(saved||location.hostname).split(':')[0];
+  return host+':'+DEFAULT_LAUNCHER_PORT;
  }
  function launcherBase(){return 'https://'+currentPcHost();}
  function savedToken(){try{return (localStorage.getItem(TOKEN_KEY)||'').trim();}catch(e){return '';}}
@@ -6893,17 +6905,18 @@ document.title='La bacchetta · MVP 7';document.querySelector('.topbar small').t
 
   async function autoConnect(){
    const token=savedToken();
+   const base=launcherBase();
    if(!token){
-    msg.textContent='Collegamento automatico non ancora configurato: vai in Impostazioni → Avanzate → '+
-     'Cabina di controllo e incolla lì il codice del pannello di avvio, una volta sola.';
+    msg.textContent='Collegamento automatico non ancora configurato: qui sopra, incolla il codice del '+
+     'pannello di avvio nel campo apposito e premi "Salva e collega".';
     return;
    }
-   msg.textContent='Accendo il bridge e mi collego automaticamente…';
+   msg.textContent='Accendo il bridge e mi collego automaticamente… ('+base+')';
    retryBtn.disabled=true;
    try{
-    const resp=await fetch(launcherBase()+'/start?token='+encodeURIComponent(token),{method:'POST'});
+    const resp=await fetch(base+'/start?token='+encodeURIComponent(token),{method:'POST'});
     if(resp.status===401){
-     msg.textContent='Codice del pannello di avvio errato: correggilo in Impostazioni → Avanzate.';
+     msg.textContent='Codice del pannello di avvio errato: correggilo qui sopra e premi di nuovo "Salva e collega".';
      retryBtn.disabled=false;return;
     }
     const d=await resp.json();
@@ -6915,8 +6928,12 @@ document.title='La bacchetta · MVP 7';document.querySelector('.topbar small').t
     $('connect')?.click();
     msg.textContent='Collegato automaticamente.';
    }catch(e){
-    msg.textContent='Impossibile contattare il pannello di avvio sul PC (spento, IP diverso o rete diversa). '+
-     'Puoi comunque collegarti a mano se hai un link valido.';
+    // Wand LXIII: il messaggio include ora l'indirizzo tentato per
+    // davvero, invece di lasciare indovinare fra le tre cause possibili -
+    // confrontarlo con quanto stampato da wand_launcher_START.cmd sul PC
+    // (stessa porta 8090) individua subito quale delle tre è la causa.
+    msg.textContent='Impossibile contattare '+base+' (pannello di avvio spento, indirizzo del PC sbagliato, '+
+     'o telefono su una rete diversa dal PC). Puoi comunque collegarti a mano se hai un link valido.';
    }
    retryBtn.disabled=false;
   }
@@ -6986,6 +7003,9 @@ document.title='La bacchetta · MVP 7';document.querySelector('.topbar small').t
    '<input id="launcherTokenInput62" type="password" autocomplete="off" placeholder="codice" '+
    'style="width:100%;box-sizing:border-box;margin-top:4px" value="'+
    savedToken.replace(/&/g,'&amp;').replace(/"/g,'&quot;')+'"></label>'+
+   '<p class="hint" style="margin:8px 0 0;font-size:.8em;opacity:.85">Nel campo "Indirizzo del PC" qui sopra '+
+   'basta l\'IP (es. 192.168.1.6): se c\'è già scritta anche una porta (es. :8443, quella del bridge), '+
+   'non è un problema - per il pannello di avvio viene sempre usata la porta giusta (8090) automaticamente.</p>'+
    '<button id="launcherTokenSave62" type="button" style="margin-top:8px">Salva e collega</button>';
 
   msg.before(box);
