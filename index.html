@@ -6833,6 +6833,115 @@ document.title='La bacchetta · MVP 7';document.querySelector('.topbar small').t
 
 </script>
 <script>
+// Wand LX: sulla pagina pubblica (bacchetta-pubblica, bundle standalone),
+// collegamento automatico al bridge appena la pagina si apre, se
+// l'indirizzo del PC e il codice del pannello di avvio (wand_launcher.py,
+// Wand XXXV/XXXVI) sono già salvati - così l'unico link da usare è sempre
+// lo stesso (quello di GitHub Pages), invece di doversi rimandare ogni
+// volta il link "fresco" col token del bridge, che cambia ad ogni riavvio
+// apposta (Wand LIII).
+//
+// Come funziona: chiama /start sul pannello di avvio (idempotente - se il
+// bridge è già acceso restituisce subito l'indirizzo esistente, altrimenti
+// lo accende), estrae il token dall'indirizzo restituito
+// (https://IP:PORTA/#TOKEN) e lo passa al campo "Codice dopo # nel link
+// Bacchetta" già esistente (Wand XL), poi preme "Collega" da solo - la
+// stessa identica sequenza che oggi l'utente fa a mano.
+//
+// Riusa le due chiavi di localStorage di wand36_ui.js (l'indirizzo del PC
+// e il codice del pannello), niente da configurare una seconda volta:
+// chi ha già usato "Avvia il bridge" in Impostazioni ha già tutto pronto.
+(() => {
+ 'use strict';
+ const $=id=>document.getElementById(id);
+ if(document.body.dataset.edition60==='1')return;
+ document.body.dataset.edition60='1';
+ if(document.body.dataset.edition58!=='1')return;
+
+ const HOST_KEY='hogwartsBridgeHost';
+ const TOKEN_KEY='hogwartsLauncherToken';
+ const DEFAULT_LAUNCHER_PORT='8090';
+
+ function currentPcHost(){
+  let saved='';
+  try{saved=(localStorage.getItem(HOST_KEY)||'').trim();}catch(e){}
+  if(saved)return saved.includes(':')?saved:saved+':'+DEFAULT_LAUNCHER_PORT;
+  return location.hostname+':'+DEFAULT_LAUNCHER_PORT;
+ }
+ function launcherBase(){return 'https://'+currentPcHost();}
+ function savedToken(){try{return (localStorage.getItem(TOKEN_KEY)||'').trim();}catch(e){return '';}}
+
+ function init(){
+  // Solo sul bundle standalone: riconoscibile dal riquadro "Indirizzo del
+  // PC" che build_standalone_bundle.py inserisce subito dopo <header>.
+  // Sulla pagina servita direttamente dal PC quel riquadro non esiste, e
+  // lì il collegamento automatico da link con #token (wand_ui.html) copre
+  // già lo stesso identico bisogno - nessuna doppia logica.
+  const hostBox=document.getElementById('pcHostOverride');
+  if(!hostBox)return;
+
+  const container=hostBox.closest('div')||hostBox.parentElement;
+  const msg=document.createElement('p');
+  msg.className='hint';
+  msg.id='autoConnect60Msg';
+  const retryBtn=document.createElement('button');
+  retryBtn.type='button';
+  retryBtn.textContent='Riprova collegamento automatico';
+  retryBtn.style.cssText='display:block;margin-top:6px';
+  container.after(msg);
+  msg.after(retryBtn);
+
+  async function autoConnect(){
+   const token=savedToken();
+   if(!token){
+    msg.textContent='Collegamento automatico non ancora configurato: vai in Impostazioni → Avanzate → '+
+     'Cabina di controllo e incolla lì il codice del pannello di avvio, una volta sola.';
+    return;
+   }
+   msg.textContent='Accendo il bridge e mi collego automaticamente…';
+   retryBtn.disabled=true;
+   try{
+    const resp=await fetch(launcherBase()+'/start?token='+encodeURIComponent(token),{method:'POST'});
+    if(resp.status===401){
+     msg.textContent='Codice del pannello di avvio errato: correggilo in Impostazioni → Avanzate.';
+     retryBtn.disabled=false;return;
+    }
+    const d=await resp.json();
+    if(d.error){msg.textContent='Errore avvio bridge: '+d.error;retryBtn.disabled=false;return;}
+    const bridgeToken=((d.url||'').split('#')[1]||'').trim();
+    if(!bridgeToken){msg.textContent='Bridge acceso ma senza indirizzo valido: riprova.';retryBtn.disabled=false;return;}
+    const pairing=document.querySelector('[aria-label="Codice di collegamento"]');
+    if(pairing)pairing.value=bridgeToken;
+    $('connect')?.click();
+    msg.textContent='Collegato automaticamente.';
+   }catch(e){
+    msg.textContent='Impossibile contattare il pannello di avvio sul PC (spento, IP diverso o rete diversa). '+
+     'Puoi comunque collegarti a mano se hai un link valido.';
+   }
+   retryBtn.disabled=false;
+  }
+  retryBtn.onclick=autoConnect;
+  autoConnect();
+ }
+
+ if(document.readyState==='complete')init();
+ else window.addEventListener('load',init);
+
+ const infoPanel=$('infoPanel16');
+ if(infoPanel){
+  const ul=infoPanel.querySelector('ul');
+  if(ul&&!ul.querySelector('li[data-v="60"]')){
+   const li=document.createElement('li');li.dataset.v='60';
+   li.innerHTML='<b>LX</b> — sulla pagina pubblica: appena si apre, se indirizzo PC e codice del pannello '+
+    'di avvio sono già salvati (Impostazioni → Avanzate → Cabina di controllo), accende da solo il bridge '+
+    'e si collega - il link pubblico resta sempre lo stesso, niente più link "freschi" da rimandarsi.';
+   ul.append(li);
+  }
+ }
+})();
+
+</script>
+<script>
 
 (() => {
  'use strict';
