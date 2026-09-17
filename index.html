@@ -3,7 +3,7 @@
 :root{color-scheme:dark;--gold:#dbc38a;--spell:#dbc38a}*{box-sizing:border-box}body{margin:0;background:#0c141c;color:#ece9df;font:16px system-ui}main{max-width:1040px;margin:auto;padding:28px 20px 70px}h1{font:42px Georgia;margin:12px 0}h2{font:25px Georgia}small,label{color:#aaa}header{border-bottom:1px solid #34424a;padding-bottom:22px}.badge{color:var(--gold);letter-spacing:3px;font-size:11px}section{border:1px solid #34424a;border-radius:18px;padding:20px;margin-top:18px;background:#111e28}button,input,select{font:inherit;border:1px solid #57616a;border-radius:10px;padding:12px;background:#1d303b;color:white;margin:4px 0;max-width:100%}button{cursor:pointer}button.primary{background:var(--gold);color:#131d23;font-weight:700}button.danger{background:#542d34}button:disabled{opacity:.4;cursor:default}.row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}.grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}#hold{width:100%;min-height:145px;touch-action:none;font:24px Georgia}canvas{width:100%;height:180px;background:#091219;border-radius:12px;touch-action:none}#log{height:130px;overflow:auto;font:12px monospace;white-space:pre-wrap}a{color:var(--gold)}#flash{position:fixed;inset:0;pointer-events:none;z-index:9;background:linear-gradient(to top,var(--spell),transparent);opacity:0}#flash.fire{animation:cast .75s ease-out}@keyframes cast{0%{opacity:0;transform:translateY(100%)}35%{opacity:.75}100%{opacity:0;transform:translateY(-100%)}}@media(max-width:700px){.grid{grid-template-columns:1fr}h1{font-size:34px}main{padding:20px 14px}.desktop{display:none}} .hint{color:#b1bdc5;font-size:14px;line-height:1.6}
 button,canvas{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}#hold,canvas{touch-action:none}button{touch-action:manipulation}</style><div id="flash"></div><main><header><div class="badge">HOGWARTS BRIDGE · PROTOTIPO 0.3</div><h1>La tua bacchetta.</h1><div id="status">Disconnesso</div><p class="hint">Impara il gesto. Pronuncia l'incantesimo. Scegli quando inviarlo al gioco.</p><button id="connect" class="primary">Collega</button> <button id="stop" class="danger">Arresta tutto</button></header>
 <div class="grid"><section><h2>Bacchetta</h2><label>Incantesimo da provare / addestrare</label><br><select id="spell"></select> <select id="mode"><option value="gesture">Glifo</option><option value="voice">Voce</option><option value="both">Voce + glifo</option></select><div class="row"><button id="sensors">Abilita sensori</button><button id="voice">Ascolta incantesimo</button></div><p id="sensorStatus" class="hint">Sensori non attivi. Puoi disegnare nel riquadro per provare il riconoscimento.</p><canvas id="trace" width="500" height="220"></canvas><button id="hold" class="primary">Tieni premuto e disegna in aria</button><div class="row"><button id="train">Memorizza prossimo glifo</button><button id="manual">Prova incantesimo selezionato</button></div><p class="hint">Memorizza un gesto per ciascun incantesimo, poi ripetilo. Il gesto usa la rotazione del telefono, non la posizione nello spazio. La voce del browser può richiedere Internet e servizi del sistema.</p><p id="result">In attesa</p></section>
-<section><h2>Cabina di controllo</h2><p id="armed">Simulazione · nessun tasto inviato</p><button id="arm">Abilita output Windows</button><p class="hint">Dal PC apri localhost. Assegna nel gioco i quattro incantesimi agli slot indicati: il bridge invia i tasti, non sblocca magie o talenti.</p><div id="mappings"></div><h2>Mano sinistra</h2><button id="pad">Attiva joypad dal PC</button><p id="padStatus">Premi un pulsante del controller dopo aver aperto questa pagina sul PC.</p><label>Pulsante Protego <input id="protectButton" type="number" min="0" max="30" value="4" style="width:65px"></label><label> Schivata <input id="dodgeButton" type="number" min="0" max="30" value="6" style="width:65px"></label><p class="hint">Stick sinistro → WASD; pulsanti configurabili → Q / Ctrl. La pagina deve restare aperta. Disattiva Steam Input per questo test per evitare doppi input. Se il browser sospende il controller passando al gioco, il watchdog rilascia i tasti: servirà il percorso nativo.</p><h2>Diario</h2><div id="log"></div></section></div>
+<section><h2>Cabina di controllo</h2><p id="armed">Simulazione · nessun tasto inviato</p><button id="arm">Abilita output Windows</button><p class="hint">Dal PC apri localhost. Assegna nel gioco i quattro incantesimi agli slot indicati: il bridge invia i tasti, non sblocca magie o talenti.</p><div id="mappings"></div><h2>Mano sinistra · joypad fisico</h2><button id="pad">Attiva joypad dal PC</button><p id="padStatus">Collega il joypad al PC, poi premi un pulsante per leggere gli indici.</p><label>Pulsante Protego <input id="protectButton" type="number" min="0" max="30" value="9" style="width:65px"></label><label> L1 / Schivata <input id="dodgeButton" type="number" min="0" max="30" value="4" style="width:65px"></label><label> L3 / Aggancio <input id="targetButton" type="number" min="0" max="30" value="7" style="width:65px"></label><label> X / Salto <input id="jumpButton" type="number" min="0" max="30" value="0" style="width:65px"></label><p class="hint">Con "Attiva joypad nativo Windows" il joypad fisico nella mano sinistra passa al bridge: analogico sinistro = movimento analogico, L1 breve = Cerchio, L1 tenuto = Cerchio mantenuto, L3 = aggancio secondo l'indice impostato. L2 resta non assegnato. Premi un pulsante e usa gli indici mostrati nello stato per correggere i valori.</p><h2>Diario</h2><div id="log"></div></section></div>
 <section><h2>Biblioteca delle mod</h2><p class="hint">Selezione di studio: nessuna compatibilità complessiva certificata sulla tua build. Installa un gruppo alla volta dal menu mod del gioco e verifica il salvataggio dedicato. Le spunte sono promemoria, non rilevamento dell'installazione.</p><div id="mods"></div><p><a href="https://portkeygamessupport.wbgames.com/hc/en-us/articles/35104153021075-Hogwarts-Legacy-Mods-Player-FAQ" target="_blank" rel="noopener">Istruzioni ufficiali installazione mod</a></p></section></main>
 <script>
 const $=id=>document.getElementById(id);let socket,spells={},armed=false,recording=false,points=[],training=false,previous=null,sensors=false,lastVoice=null,padActive=false,buttons=[],lastPad=0;
@@ -25,8 +25,8 @@ $('pad').onclick=()=>{padActive=!padActive;$('pad').textContent=padActive?'Disat
 setInterval(()=>{if(!padActive)return;let pad=Array.from(navigator.getGamepads?.()||[]).find(Boolean);if(!pad){$('padStatus').textContent='Joypad non rilevato · premi un tasto';send({type:'pad',keys:[]});return}let x=pad.axes[0]||0,y=pad.axes[1]||0;let keys=[];if(x<-.3)keys.push('a');if(x>.3)keys.push('d');if(y<-.3)keys.push('w');if(y>.3)keys.push('s');send({type:'pad',keys});$('padStatus').textContent=pad.id+' · '+keys.join(' ')+' · pulsanti '+pad.buttons.map((b,i)=>b.pressed?i:null).filter(i=>i!==null).join(',');for(const [field,action]of [['protectButton','protego'],['dodgeButton','dodge']]){let i=Number($(field).value);if(pad.buttons[i]?.pressed&&!buttons[i])send({type:'action',action})}buttons=pad.buttons.map(b=>b.pressed)},100);
 const mods=[['Spells Enhanced','spells-enhanced-new-spells','Magia · scegliere come prima espansione'],['Spells & Talents','spellsandtalents','Magia · sovrapposizioni con altre espansioni da verificare'],['Floo Companions','companions','Compagni · prima base per avventure in gruppo'],['Companion Spells','companion-spells','Richiede Floo Companions'],['Emote With Any Npc','emotewithanynpc','Vita a Hogwarts · interazioni sociali'],['Hogwarts Ultimate','hogwarts-ultimate-gameplay-overhaul','Profilo alternativo: conflitti dichiarati con spell/economia/livelli']];for(const[name,slug,note]of mods){let row=document.createElement('p'),check=document.createElement('input');check.type='checkbox';check.checked=localStorage.getItem('mod:'+slug)==='yes';check.onchange=()=>localStorage.setItem('mod:'+slug,check.checked?'yes':'no');let a=document.createElement('a');a.textContent=name;a.href='https://www.curseforge.com/hogwarts-legacy/mods/'+slug;a.target='_blank';a.rel='noopener';row.append(check,' ',a,' — '+note);$('mods').append(row)}
 </script><script>
-const nativeButton=document.createElement('button');nativeButton.textContent='Attiva joypad nativo Windows';$('pad').after(nativeButton);let nativeEnabled=false;nativeButton.onclick=()=>{nativeEnabled=!nativeEnabled;padActive=false;send({type:'native_pad',enabled:nativeEnabled,protect:Number($('protectButton').value),dodge:Number($('dodgeButton').value)});nativeButton.textContent=nativeEnabled?'Disattiva joypad nativo':'Attiva joypad nativo Windows'};
-$('protectButton').value='9';$('dodgeButton').value='4';
+const nativeButton=document.createElement('button');nativeButton.textContent='Attiva joypad nativo Windows';$('pad').textContent='Test joypad nel browser';$('pad').after(nativeButton);let nativeEnabled=false;nativeButton.onclick=()=>{nativeEnabled=!nativeEnabled;padActive=false;send({type:'native_pad',enabled:nativeEnabled,protect:Number($('protectButton').value),dodge:Number($('dodgeButton').value),look_lock:Number($('targetButton').value),jump:Number($('jumpButton').value)});nativeButton.textContent=nativeEnabled?'Disattiva joypad nativo':'Attiva joypad nativo Windows'};
+$('protectButton').value='9';$('dodgeButton').value='4';$('targetButton').value='7';$('jumpButton').value='0';
 </script><script>
 // Touch, pairing diagnostics and a calibrated, relative pointing frame.
 const tip=document.createElement('p');tip.className='hint';
@@ -7100,86 +7100,8 @@ document.title='La bacchetta · MVP 7';document.querySelector('.topbar small').t
  style.textContent=`
   #bigGrid25 #dodgeBtn18{touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
   #bigGrid25 #dodgeBtn18 .bigSub{white-space:nowrap}
-  /* Joypad sinistro del telefono: il movimento è un vero left stick del
-     DS4 virtuale, separato dal R3 centrale che gestisce visuale/bersaglio. */
-  #moveDock63{position:fixed;left:max(10px,env(safe-area-inset-left));bottom:max(10px,env(safe-area-inset-bottom));width:146px;height:184px;z-index:60;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:7px;pointer-events:none;filter:drop-shadow(0 8px 12px #0009)}
-  #moveL163{pointer-events:auto;width:58px;height:38px;padding:0;border-radius:12px;border:1px solid #8c6b45;background:linear-gradient(145deg,#40352b,#1b2024);color:#f2dfb2;font:700 11px Georgia,serif;letter-spacing:1px;touch-action:none;user-select:none;-webkit-user-select:none}
-  #moveL163.active{background:#6a4d12;border-color:#f0cf7a}
-  #moveStick63{position:relative;pointer-events:auto;width:128px;height:128px;border-radius:50%;background:radial-gradient(circle at 35% 28%,#3d4b52,#151d22 76%);border:1px solid #76858c;touch-action:none;user-select:none;-webkit-user-select:none}
-  #moveStick63::after{content:'L3';position:absolute;inset:0;display:grid;place-items:center;color:#cfe3d4;font:700 12px Georgia,serif;letter-spacing:1px;pointer-events:none;opacity:.8}
-  #moveKnob63{position:absolute;left:50%;top:50%;width:54px;height:54px;border-radius:50%;background:#273943;border:1px solid #a0b5bd;transform:translate(-50%,-50%);pointer-events:none;box-shadow:0 3px 8px #0008}
-  #moveStick63[data-dragging="1"] #moveKnob63{transition:none;background:#35515d;border-color:#d8f0f0}
-  @media (orientation:landscape){#moveDock63{bottom:max(8px,env(safe-area-inset-bottom));left:max(8px,env(safe-area-inset-left))}}
  `;
  document.head.append(style);
-
- // --- Joypad sinistro: movimento analogico + L1/Cerchio ---
- const moveDock63=document.createElement('aside');
- moveDock63.id='moveDock63';
- moveDock63.setAttribute('aria-label','Joypad sinistro');
- moveDock63.innerHTML='<button id="moveL163" type="button" aria-label="L1: Cerchio breve o tenuto premuto">L1 · ○</button><div id="moveStick63" role="slider" aria-label="Movimento analogico" tabindex="0"><div id="moveKnob63"></div></div>';
- document.body.append(moveDock63);
-
- const moveStick63=$('moveStick63'),moveKnob63=$('moveKnob63');
- const MOVE_RADIUS63=42,MOVE_DEAD63=8,MOVE_TICK63=35;
- let movePointer63=null,moveDx63=0,moveDy63=0,moveTimer63=null,moveDragging63=false;
- function sendMove63(){
-  if(movePointer63===null||!ready)return;
-  const mag=Math.hypot(moveDx63,moveDy63);
-  if(mag<MOVE_DEAD63){transportSend({type:'wand_move_stick',x:0,y:0});return;}
-  const amount=Math.min(1,mag/MOVE_RADIUS63);
-  transportSend({type:'wand_move_stick',x:(moveDx63/mag)*amount,y:(-moveDy63/mag)*amount});
- }
- function drawMove63(){
-  const mag=Math.hypot(moveDx63,moveDy63),scale=mag?Math.min(1,MOVE_RADIUS63/mag):0;
-  moveKnob63.style.transform='translate(calc(-50% + '+(moveDx63*scale)+'px),calc(-50% + '+(moveDy63*scale)+'px))';
- }
- moveStick63.onpointerdown=e=>{
-  e.preventDefault();if(!ready||movePointer63!==null)return;
-  movePointer63=e.pointerId;moveDx63=0;moveDy63=0;moveDragging63=false;
-  moveStick63.setPointerCapture(e.pointerId);moveStick63.dataset.dragging='1';
-  clearInterval(moveTimer63);moveTimer63=setInterval(sendMove63,MOVE_TICK63);sendMove63();
- };
- moveStick63.onpointermove=e=>{
-  if(e.pointerId!==movePointer63)return;
-  moveDx63=e.clientX-(moveStick63.getBoundingClientRect().left+moveStick63.clientWidth/2);
-  moveDy63=e.clientY-(moveStick63.getBoundingClientRect().top+moveStick63.clientHeight/2);
-  moveDragging63=Math.hypot(moveDx63,moveDy63)>=MOVE_DEAD63;
-  drawMove63();
- };
- function endMove63(e){
-  if(e.pointerId!==movePointer63)return;
-  movePointer63=null;clearInterval(moveTimer63);moveTimer63=null;moveDx63=0;moveDy63=0;moveDragging63=false;
-  delete moveStick63.dataset.dragging;moveKnob63.style.transform='translate(-50%,-50%)';
-  transportSend({type:'wand_move_stick',x:0,y:0});
- }
- moveStick63.onpointerup=moveStick63.onpointercancel=moveStick63.onlostpointercapture=endMove63;
-
- // L1 conserva la semantica del joypad fisico: un tocco breve è Cerchio,
- // una pressione oltre la soglia diventa Cerchio mantenuto (il binding
- // flight_descend usa volutamente lo stesso slot L1). La decisione è
- // ritardata di poco per non inviare prima un tap che renderebbe impossibile
- // trasformarlo correttamente in un hold.
- const L1_HOLD_MS63=220;
- const moveL163=$('moveL163');
- let l1Pointer63=null,l1Long63=false,l1Timer63=null;
- moveL163.onpointerdown=e=>{
-  e.preventDefault();if(!ready||l1Pointer63!==null)return;
-  l1Pointer63=e.pointerId;l1Long63=false;shieldHolding7=true;
-  moveL163.setPointerCapture(e.pointerId);moveL163.classList.add('active');
-  clearTimeout(l1Timer63);l1Timer63=setTimeout(()=>{
-   if(l1Pointer63!==e.pointerId)return;
-   l1Long63=true;performAction('flight_descend');
-  },L1_HOLD_MS63);
- };
- function endL163(e){
-  if(e.pointerId!==l1Pointer63)return;
-  l1Pointer63=null;clearTimeout(l1Timer63);l1Timer63=null;
-  if(!l1Long63)performAction('back');
-  else releaseMaintained();
-  l1Long63=false;shieldHolding7=false;moveL163.classList.remove('active');
- }
- moveL163.onpointerup=moveL163.onpointercancel=moveL163.onlostpointercapture=endL163;
 
  // Wand XLVIII aggiunge un listener pointerup che invia "confirm" quando
  // Magia Base non ha prodotto un attacco. Con il nuovo contratto il comando
@@ -7280,7 +7202,7 @@ document.title='La bacchetta · MVP 7';document.querySelector('.topbar small').t
   const ul=infoPanel.querySelector('ul');
   if(ul&&!ul.querySelector('li[data-v="63"]')){
    const li=document.createElement('li');li.dataset.v='63';
-   li.innerHTML='<b>LXIV</b> — contratto finale dei 4 comandi: Magia Base tiene □, poi al movimento passa all’attacco base; Magia Avanzata usa i quattro glifi R2 del set attivo; Magia Antica fa R1 o L1+R1; Cambio Set usa X e swipe verticale. A sinistra il joypad aggiunge movimento analogico e L1/Cerchio breve o mantenuto.';
+   li.innerHTML='<b>LXIV</b> — contratto finale dei 4 comandi della bacchetta: Magia Base tiene □, poi al movimento passa all’attacco base; Magia Avanzata usa i quattro glifi R2 del set attivo; Magia Antica fa R1 o L1+R1; Cambio Set usa X e swipe verticale. Il joypad fisico resta nella mano sinistra: analogico, L1/L3 e gli altri comandi non appartengono allo schermo del telefono.';
    ul.append(li);
   }
  }
