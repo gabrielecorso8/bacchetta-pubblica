@@ -4476,8 +4476,8 @@ document.title='La bacchetta · MVP 7';document.querySelector('.topbar small').t
  // --- 2) Checklist persistente dei test in-game ancora aperti ---
  const secCabina=byHeading('Cabina di controllo');
  const ITEMS=[
-  {id:'wasd',label:'WASD nativo + pad virtuale insieme',
-   hint:'Attiva "joypad nativo Windows" qui sotto in Mano sinistra, poi muoviti in gioco: il movimento deve rispondere subito, senza conflitti con la bacchetta.'},
+  {id:'wasd',label:'Analogico fisico + pad virtuale insieme',
+   hint:'Attiva "joypad nativo Windows" qui sotto in Mano sinistra, poi muoviti in gioco: l\'analogico fisico deve rispondere subito, senza conflitti con la bacchetta.'},
   {id:'volo',label:'Soglia Volo (schivata rapida vs tenuto per scendere)',
    hint:'In volo su una scopa: premi Schivata/Cerchio brevemente (deve schivare), poi tienilo premuto oltre 220ms (deve far scendere). Se la soglia sembra sbagliata coi tempi di reazione reali, dimmelo: si aggiusta DODGE_HOLD_THRESHOLD in wand_server.py.'},
   {id:'salto',label:'Tasto Salto',
@@ -6366,9 +6366,10 @@ document.title='La bacchetta · MVP 7';document.querySelector('.topbar small').t
 
  const tabBar=$('tabs17');
  if(!tabBar)return;
+ const isPcDashboard54=['localhost','127.0.0.1'].includes(location.hostname);
 
  const style=document.createElement('style');
- style.textContent=`
+ style.textContent=(isPcDashboard54?'':`
  /* --- Le tre schede bloccate: bottone sparito dalla barra... --- */
  #tabs17 button[data-tab-target17="spells"],
  #tabs17 button[data-tab-target17="wand"],
@@ -6387,28 +6388,56 @@ document.title='La bacchetta · MVP 7';document.querySelector('.topbar small').t
     una nota statica - il PC ora si avvia da solo (Wand LIII). --- */
  #bridgeLauncher36{display:none!important}
  #hl54StartNote{margin:0}
+ `)+`
+ /* Dashboard PC: output reale e joypad fisico devono essere visibili senza
+    dover entrare nell'interfaccia ridotta della bacchetta. */
+ #pcDashboard54{position:fixed;inset:12px;z-index:100;background:#10251d;color:#ede4cc;border:1px solid #c9b26a;border-radius:18px;padding:18px;overflow:auto;box-shadow:0 20px 70px #000d}
+ #pcDashboard54 h1{font:24px Georgia;margin:0 0 6px;color:#f0dfae}
+ #pcDashboard54 .pcDashIntro{margin:0 0 14px;color:#c6d2c9;line-height:1.5}
+ #pcDashboard54>section{margin:0;padding:16px;background:#142c23;border:1px solid #8e805444;border-radius:14px}
+ #pcDashboard54 button,#pcDashboard54 input,#pcDashboard54 select{min-height:42px}
  `;
  document.head.append(style);
 
  // Se la scheda ricordata da una sessione precedente è una di quelle
  // appena bloccate, si torna a "Gioca" (mai lasciare tutte le sezioni
  // nascoste insieme per un tabId che non ha più un bottone raggiungibile).
- const current=tabBar.querySelector('button[aria-current="true"]');
- if(current && ['spells','wand','advanced'].includes(current.dataset.tabTarget17)){
-  tabBar.querySelector('button[data-tab-target17="play"]')?.click();
+ if(!isPcDashboard54){
+  const current=tabBar.querySelector('button[aria-current="true"]');
+  if(current && ['spells','wand','advanced'].includes(current.dataset.tabTarget17)){
+   tabBar.querySelector('button[data-tab-target17="play"]')?.click();
+  }
  }
 
  // Card 1 di Avvio: il pulsante "Avvia il bridge" diventa una nota - il PC
  // fa già tutto da solo, non c'è più nulla da premere qui.
- const cardServer=$('hl44CardServer');
- if(cardServer && !$('hl54StartNote')){
-  const h3=cardServer.querySelector('h3');
-  if(h3)h3.textContent='1 · Il PC si avvia da solo';
-  const note=document.createElement('p');
-  note.id='hl54StartNote';
-  note.className='hint';
-  note.textContent='Non serve più premere nulla qui: appena accendi il PC e apri wand_launcher.py, il bridge parte da sé. Se la bacchetta risulta scollegata, controlla il PC - dal telefono basta riaprire questa pagina.';
-  cardServer.append(note);
+ if(!isPcDashboard54){
+  const cardServer=$('hl44CardServer');
+  if(cardServer && !$('hl54StartNote')){
+   const h3=cardServer.querySelector('h3');
+   if(h3)h3.textContent='1 · Il PC si avvia da solo';
+   const note=document.createElement('p');
+   note.id='hl54StartNote';
+   note.className='hint';
+   note.textContent='Non serve più premere nulla qui: appena accendi il PC e apri wand_launcher.py, il bridge parte da sé. Se la bacchetta risulta scollegata, controlla il PC - dal telefono basta riaprire questa pagina.';
+   cardServer.append(note);
+  }
+ }
+
+ // Sul telefono queste impostazioni restano nascoste per lasciare solo la
+ // bacchetta. Su localhost, invece, il PC deve avere un pannello esplicito:
+ // qui si armano l'output Windows e il joypad fisico, senza dipendere dal
+ // tab Avanzate o da una sessione precedente del localStorage.
+ if(isPcDashboard54 && !$('pcDashboard54')){
+  const controls=$('arm')?.closest('section');
+  if(controls){
+   const panel=document.createElement('section');
+   panel.id='pcDashboard54';
+   panel.innerHTML='<h1>Dashboard PC · output e joypad</h1><p class="pcDashIntro">Questa pagina è il punto di controllo del gioco. Premi prima <b>Abilita output Windows</b>, poi attiva il joypad nativo. La calibrazione della bacchetta e i sensori si fanno dal telefono.</p>';
+   document.body.append(panel);
+   controls.hidden=false;
+   panel.append(controls);
+  }
  }
 
  const infoPanel=$('infoPanel16');
